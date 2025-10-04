@@ -1,1 +1,1 @@
-# scrooge-bank
+# Scrooge bank Api
