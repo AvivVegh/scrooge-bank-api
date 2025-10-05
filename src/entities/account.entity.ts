@@ -12,7 +12,7 @@ export enum AccountType {
 
 @Entity('accounts')
 @Unique(['userId', 'type'])
-export class AccountsEntity {
+export class AccountEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 

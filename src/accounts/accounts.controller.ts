@@ -4,7 +4,8 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { AccountsService } from './accounts.service';
 import { CloseAccountDto } from './dto/close-account.dto';
 import { CreateAccountDto } from './dto/create-account.dto';
-import { DepositDto } from './dto/deposit.dto';
+import { CreateDepositDto } from './dto/create-deposit.dto';
+import { DepositResultDto } from './dto/deposit-result.dto';
 import { GetAccountDto } from './dto/get-account.dto';
 import { WithdrawDto } from './dto/withdraw.dto';
 
@@ -68,10 +69,15 @@ export class AccountsController {
   @ApiResponse({ status: 200, description: 'Funds deposited successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Account not found' })
-  async deposit(@Body(ValidationPipe) depositDto: DepositDto) {
+  async deposit(
+    @Body(ValidationPipe) depositDto: CreateDepositDto,
+    @Req() req: Request & { user: { userId: string } },
+  ): Promise<DepositResultDto> {
     return this.accountsService.deposit({
+      userId: req.user?.userId,
       accountId: depositDto.accountId,
       amount: depositDto.amount,
+      idempotencyKey: depositDto.idempotencyKey,
     });
   }
 
@@ -82,10 +88,15 @@ export class AccountsController {
   @ApiResponse({ status: 200, description: 'Funds withdrawn successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Account not found' })
-  async withdraw(@Body(ValidationPipe) withdrawDto: WithdrawDto) {
+  async withdraw(
+    @Body(ValidationPipe) withdrawDto: WithdrawDto,
+    @Req() req: Request & { user: { userId: string } },
+  ) {
     return this.accountsService.withdraw({
       accountId: withdrawDto.accountId,
       amount: withdrawDto.amount,
+      userId: req.user?.userId,
+      idempotencyKey: withdrawDto.idempotencyKey,
     });
   }
 }

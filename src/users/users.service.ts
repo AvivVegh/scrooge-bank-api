@@ -2,8 +2,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThan, Repository } from 'typeorm';
-import { RefreshTokensEntity } from './entities/refresh-tokens.entity';
-import { UserRole, UsersEntity } from './entities/users.entity';
+import { RefreshTokensEntity } from '../entities/refresh-tokens.entity';
+import { UserRole, UsersEntity } from '../entities/users.entity';
 
 @Injectable()
 export class UsersService {

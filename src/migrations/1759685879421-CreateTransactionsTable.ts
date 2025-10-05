@@ -9,7 +9,7 @@ export class CreateTransactionsTable1759685879421 implements MigrationInterface 
                 account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
                 type transaction_type NOT NULL,
                 amount_cents BIGINT NOT NULL CHECK (amount_cents >= 0),
-                idempotency_key TEXT NOT NULL,
+                idempotency_key TEXT,
                 created_by_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 created_at TIMESTAMP NOT NULL DEFAULT NOW()
             );

@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsNotEmpty } from 'class-validator';
-import { AccountType } from '../entities/accounts.entity';
+import { AccountType } from '../../entities/account.entity';
 
 export class CreateAccountDto {
   @ApiProperty({

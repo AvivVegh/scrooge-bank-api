@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class WithdrawDto {
   @ApiProperty({
@@ -17,4 +17,12 @@ export class WithdrawDto {
   @IsNumber({}, { message: 'Amount must be a number' })
   @IsNotEmpty({ message: 'Amount is required' })
   amount: number;
+
+  @ApiProperty({
+    description: 'Idempotency key',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @IsString({ message: 'Idempotency key must be a string' })
+  @IsOptional({ message: 'Idempotency key is optional' })
+  idempotencyKey?: string;
 }
