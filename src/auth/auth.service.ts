@@ -10,6 +10,7 @@ import { UsersService } from '../users/users.service';
 @Injectable()
 export class AuthService {
   private readonly accessTokenExpirationTime;
+
   constructor(
     private usersService: UsersService,
     private jwt: JwtService,
@@ -20,7 +21,7 @@ export class AuthService {
     if (!process.env.JWT_ACCESS_TOKEN_EXPIRATION_TIME) {
       throw new Error('JWT_ACCESS_TOKEN_EXPIRATION_TIME is not set');
     }
-    this.accessTokenExpirationTime = process.env.JWT_ACCESS_TOKEN_EXPIRATION_TIME!;
+    this.accessTokenExpirationTime = process.env.JWT_ACCESS_TOKEN_EXPIRATION_TIME;
   }
 
   async register(email: string, password: string) {
@@ -30,14 +31,20 @@ export class AuthService {
       password_hash,
       roles: [UserRole.USER],
     });
+
     console.log('user created: ', user.id);
     return this.issueTokens({ sub: user.id, roles: user.roles });
   }
 
   async validateUser(email: string, password: string) {
     const user = await this.usersService.findByEmail(email);
-    if (!user) return null;
+
+    if (!user) {
+      return null;
+    }
+
     const ok = await argon2.verify(user.passwordHash, password);
+
     return ok ? user : null;
   }
 
@@ -54,7 +61,7 @@ export class AuthService {
   async issueTokens({ sub, roles }: { sub: string; roles: string[] }) {
     const accessToken = await this.jwt.signAsync(
       { sub, roles },
-      { expiresIn: this.accessTokenExpirationTime },
+      { expiresIn: this.accessTokenExpirationTime as string },
     );
     const jti = randomUUID();
     const refreshToken = randomUUID() + '.' + randomUUID();

@@ -19,5 +19,12 @@ export class CreateTransactionsTable1759685879421 implements MigrationInterface 
         `);
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {}
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
+      DROP INDEX idx_account_idempotency_key;
+      DROP INDEX idx_account_created_at;
+      DROP TABLE transactions;
+      DROP TYPE transaction_type;
+    `);
+  }
 }

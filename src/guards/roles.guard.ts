@@ -5,7 +5,8 @@ export const ROLES_KEY = 'roles';
 
 export const Roles =
   (...roles: string[]) =>
-  (target, key?, desc?) =>
+  (target: any, key?: any, desc?: any) =>
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
     Reflect.defineMetadata(ROLES_KEY, roles, desc?.value ?? target);
 
 @Injectable()
@@ -22,12 +23,14 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const { user } = ctx.switchToHttp().getRequest();
 
     if (!user) {
       throw new ForbiddenException();
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     if (allowed.some(r => user.roles?.includes(r))) {
       return true;
     }

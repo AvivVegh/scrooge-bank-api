@@ -16,10 +16,17 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    roles: string[];
+  };
+}
+
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  refreshTokenMaxAge;
+  refreshTokenMaxAge: number;
   constructor(private authService: AuthService) {
     this.refreshTokenMaxAge = 30 * 24 * 3600 * 1000;
   }
@@ -75,7 +82,11 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized - invalid credentials' })
   @ApiResponse({ status: 400, description: 'Bad request - validation failed' })
-  async login(@Body(ValidationPipe) loginDto: LoginDto, @Req() req, @Res() res: Response) {
+  async login(
+    @Body(ValidationPipe) loginDto: LoginDto,
+    @Req() req: AuthenticatedRequest,
+    @Res() res: Response,
+  ) {
     if (!req.user) {
       throw new UnauthorizedException();
     }
@@ -122,7 +133,7 @@ export class AuthController {
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    const refreshToken = req.cookies?.['refresh_token'];
+    const refreshToken = req.cookies?.['refresh_token'] as string;
     console.log('refreshToken: ', refreshToken);
     const userId = refreshDto.userId;
 
