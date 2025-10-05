@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AccountsEntity, AccountStatus, AccountType } from './entities/accounts.entity';
@@ -32,7 +37,7 @@ export class AccountsService {
 
   async findByUserId({ accountId }: { accountId: string }) {
     const account = await this.accountsRepository.findOne({
-      where: { id: accountId },
+      where: { id: accountId, status: AccountStatus.OPEN },
     });
 
     if (!account) {
@@ -60,5 +65,50 @@ export class AccountsService {
     account.status = AccountStatus.CLOSED;
     account.closedAt = new Date();
     return await this.accountsRepository.save(account);
+  }
+
+  async deposit({ accountId, amount }: { accountId: string; amount: number }) {
+    const account = await this.accountsRepository.findOne({
+      where: { id: accountId, status: AccountStatus.OPEN },
+    });
+
+    if (!account) {
+      throw new NotFoundException('Account not found');
+    }
+
+    if (account.type === AccountType.LOAN) {
+      throw new BadRequestException('Loan accounts cannot be deposited into');
+    }
+
+    account.balanceCents += this.convertToCents(amount);
+
+    return await this.accountsRepository.save(account);
+  }
+
+  async withdraw({ accountId, amount }: { accountId: string; amount: number }) {
+    const account = await this.accountsRepository.findOne({
+      where: { id: accountId, status: AccountStatus.OPEN },
+    });
+
+    if (!account) {
+      throw new NotFoundException('Account not found');
+    }
+
+    if (account.type === AccountType.LOAN) {
+      throw new BadRequestException('Loan accounts cannot be withdrawn from');
+    }
+
+    const amountCents = this.convertToCents(amount);
+
+    if (account.balanceCents < amountCents) {
+      throw new BadRequestException('Insufficient balance');
+    }
+
+    account.balanceCents -= amountCents;
+    return await this.accountsRepository.save(account);
+  }
+
+  private convertToCents(amount: number) {
+    return Math.round(amount * 100);
   }
 }

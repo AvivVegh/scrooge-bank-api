@@ -4,7 +4,9 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { AccountsService } from './accounts.service';
 import { CloseAccountDto } from './dto/close-account.dto';
 import { CreateAccountDto } from './dto/create-account.dto';
+import { DepositDto } from './dto/deposit.dto';
 import { GetAccountDto } from './dto/get-account.dto';
+import { WithdrawDto } from './dto/withdraw.dto';
 
 @ApiTags('Account')
 @Controller('account')
@@ -57,5 +59,33 @@ export class AccountsController {
   @ApiResponse({ status: 404, description: 'Account not found' })
   async closeAccount(@Body(ValidationPipe) closeAccountDto: CloseAccountDto) {
     return this.accountsService.closeAccount({ accountId: closeAccountDto.accountId });
+  }
+
+  @Post('deposit')
+  @ApiOperation({
+    summary: 'Deposit funds into an account (loan accounts cannot be deposited into)',
+  })
+  @ApiResponse({ status: 200, description: 'Funds deposited successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Account not found' })
+  async deposit(@Body(ValidationPipe) depositDto: DepositDto) {
+    return this.accountsService.deposit({
+      accountId: depositDto.accountId,
+      amount: depositDto.amount,
+    });
+  }
+
+  @Post('withdraw')
+  @ApiOperation({
+    summary: 'Withdraw funds from an account (loan accounts cannot be withdrawn from)',
+  })
+  @ApiResponse({ status: 200, description: 'Funds withdrawn successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Account not found' })
+  async withdraw(@Body(ValidationPipe) withdrawDto: WithdrawDto) {
+    return this.accountsService.withdraw({
+      accountId: withdrawDto.accountId,
+      amount: withdrawDto.amount,
+    });
   }
 }
