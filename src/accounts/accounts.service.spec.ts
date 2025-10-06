@@ -11,7 +11,6 @@ import { AccountsService } from './accounts.service';
 describe('AccountsService', () => {
   let service: AccountsService;
   let accountRepository: jest.Mocked<Repository<AccountEntity>>;
-  let dataSource: jest.Mocked<DataSource>;
 
   // Mock transaction manager
   const mockTransactionManager = {
@@ -20,7 +19,9 @@ describe('AccountsService', () => {
   };
 
   const mockDataSource = {
-    transaction: jest.fn(cb => cb(mockTransactionManager)),
+    transaction: jest.fn((cb: (manager: typeof mockTransactionManager) => unknown) =>
+      cb(mockTransactionManager),
+    ),
   };
 
   beforeEach(async () => {
@@ -45,7 +46,6 @@ describe('AccountsService', () => {
 
     service = module.get<AccountsService>(AccountsService);
     accountRepository = module.get(getRepositoryToken(AccountEntity));
-    dataSource = module.get(DataSource);
 
     // Reset mocks before each test
     jest.clearAllMocks();
@@ -65,8 +65,8 @@ describe('AccountsService', () => {
       };
 
       accountRepository.findOne.mockResolvedValue(null);
-      accountRepository.create.mockReturnValue(newAccount as any);
-      accountRepository.save.mockResolvedValue(newAccount as any);
+      accountRepository.create.mockReturnValue(newAccount);
+      accountRepository.save.mockResolvedValue(newAccount);
 
       const result = await service.create({ userId });
 
@@ -88,12 +88,14 @@ describe('AccountsService', () => {
         userId,
         balanceCents: 1000,
         status: AccountStatus.OPEN,
+        createdAt: new Date(),
+        closedAt: null,
       };
 
-      accountRepository.findOne.mockResolvedValue(existingAccount as any);
+      accountRepository.findOne.mockResolvedValue(existingAccount);
 
-      await expect(service.create({ userId })).rejects.toThrow(ConflictException);
-      await expect(service.create({ userId })).rejects.toThrow(
+      await expect(() => service.create({ userId })).rejects.toThrow(ConflictException);
+      await expect(() => service.create({ userId })).rejects.toThrow(
         'Account already exists for this user',
       );
       expect(accountRepository.create).not.toHaveBeenCalled();
@@ -114,7 +116,7 @@ describe('AccountsService', () => {
         closedAt: null,
       };
 
-      accountRepository.findOne.mockResolvedValue(account as any);
+      accountRepository.findOne.mockResolvedValue(account);
 
       const result = await service.findByUserId({ accountId });
 
@@ -127,8 +129,8 @@ describe('AccountsService', () => {
     it('should throw NotFoundException if account not found', async () => {
       accountRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.findByUserId({ accountId })).rejects.toThrow(NotFoundException);
-      await expect(service.findByUserId({ accountId })).rejects.toThrow('Account not found');
+      await expect(() => service.findByUserId({ accountId })).rejects.toThrow(NotFoundException);
+      await expect(() => service.findByUserId({ accountId })).rejects.toThrow('Account not found');
     });
   });
 
@@ -142,10 +144,12 @@ describe('AccountsService', () => {
           userId,
           balanceCents: 1000,
           status: AccountStatus.OPEN,
+          createdAt: new Date(),
+          closedAt: null,
         },
       ];
 
-      accountRepository.find.mockResolvedValue(accounts as any);
+      accountRepository.find.mockResolvedValue(accounts);
 
       const result = await service.findAllAccounts({ userId });
 
@@ -211,8 +215,10 @@ describe('AccountsService', () => {
 
       mockTransactionManager.getRepository.mockReturnValue(mockAccountRepo);
 
-      await expect(service.closeAccount({ userId, accountId })).rejects.toThrow(NotFoundException);
-      await expect(service.closeAccount({ userId, accountId })).rejects.toThrow(
+      await expect(() => service.closeAccount({ userId, accountId })).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(() => service.closeAccount({ userId, accountId })).rejects.toThrow(
         'Account not found',
       );
     });
@@ -248,10 +254,10 @@ describe('AccountsService', () => {
         return null;
       });
 
-      await expect(service.closeAccount({ userId, accountId })).rejects.toThrow(
+      await expect(() => service.closeAccount({ userId, accountId })).rejects.toThrow(
         BadRequestException,
       );
-      await expect(service.closeAccount({ userId, accountId })).rejects.toThrow(
+      await expect(() => service.closeAccount({ userId, accountId })).rejects.toThrow(
         'Account has loans and cannot be closed',
       );
     });
@@ -278,10 +284,10 @@ describe('AccountsService', () => {
         return null;
       });
 
-      await expect(service.closeAccount({ userId, accountId })).rejects.toThrow(
+      await expect(() => service.closeAccount({ userId, accountId })).rejects.toThrow(
         BadRequestException,
       );
-      await expect(service.closeAccount({ userId, accountId })).rejects.toThrow(
+      await expect(() => service.closeAccount({ userId, accountId })).rejects.toThrow(
         'Account has money and cannot be closed',
       );
     });
@@ -341,14 +347,14 @@ describe('AccountsService', () => {
     });
 
     it('should throw BadRequestException for zero or negative amount', async () => {
-      await expect(service.deposit({ userId, accountId, amount: 0 })).rejects.toThrow(
+      await expect(() => service.deposit({ userId, accountId, amount: 0 })).rejects.toThrow(
         BadRequestException,
       );
-      await expect(service.deposit({ userId, accountId, amount: 0 })).rejects.toThrow(
+      await expect(() => service.deposit({ userId, accountId, amount: 0 })).rejects.toThrow(
         'Amount must be greater than 0',
       );
 
-      await expect(service.deposit({ userId, accountId, amount: -50 })).rejects.toThrow(
+      await expect(() => service.deposit({ userId, accountId, amount: -50 })).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -360,7 +366,7 @@ describe('AccountsService', () => {
 
       mockTransactionManager.getRepository.mockReturnValue(mockAccountRepo);
 
-      await expect(service.deposit({ userId, accountId, amount })).rejects.toThrow(
+      await expect(() => service.deposit({ userId, accountId, amount })).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -443,12 +449,12 @@ describe('AccountsService', () => {
         return null;
       });
 
-      await expect(service.deposit({ userId, accountId, amount, idempotencyKey })).rejects.toThrow(
-        ConflictException,
-      );
-      await expect(service.deposit({ userId, accountId, amount, idempotencyKey })).rejects.toThrow(
-        'Idempotency key already used with a different operation/amount',
-      );
+      await expect(() =>
+        service.deposit({ userId, accountId, amount, idempotencyKey }),
+      ).rejects.toThrow(ConflictException);
+      await expect(() =>
+        service.deposit({ userId, accountId, amount, idempotencyKey }),
+      ).rejects.toThrow('Idempotency key already used with a different operation/amount');
     });
   });
 
@@ -531,19 +537,19 @@ describe('AccountsService', () => {
         return null;
       });
 
-      await expect(service.withdraw({ userId, accountId, amount })).rejects.toThrow(
+      await expect(() => service.withdraw({ userId, accountId, amount })).rejects.toThrow(
         BadRequestException,
       );
-      await expect(service.withdraw({ userId, accountId, amount })).rejects.toThrow(
+      await expect(() => service.withdraw({ userId, accountId, amount })).rejects.toThrow(
         'Insufficient funds',
       );
     });
 
     it('should throw BadRequestException for zero or negative amount', async () => {
-      await expect(service.withdraw({ userId, accountId, amount: 0 })).rejects.toThrow(
+      await expect(() => service.withdraw({ userId, accountId, amount: 0 })).rejects.toThrow(
         BadRequestException,
       );
-      await expect(service.withdraw({ userId, accountId, amount: -50 })).rejects.toThrow(
+      await expect(() => service.withdraw({ userId, accountId, amount: -50 })).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -563,7 +569,7 @@ describe('AccountsService', () => {
         return null;
       });
 
-      await expect(service.withdraw({ userId, accountId, amount })).rejects.toThrow(
+      await expect(() => service.withdraw({ userId, accountId, amount })).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -634,9 +640,9 @@ describe('AccountsService', () => {
 
       mockTransactionManager.getRepository.mockReturnValue(mockAccountRepo);
 
-      await expect(service.getAccountStatement({ accountId, fromDate, toDate })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(() =>
+        service.getAccountStatement({ accountId, fromDate, toDate }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

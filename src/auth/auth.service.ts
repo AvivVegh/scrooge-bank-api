@@ -84,7 +84,7 @@ export class AuthService {
 
     const accessToken = await this.jwt.signAsync(
       { sub, roles },
-      { expiresIn: this.accessTokenExpirationTime as string },
+      { expiresIn: this.accessTokenExpirationTime },
     );
 
     const jti = randomUUID();

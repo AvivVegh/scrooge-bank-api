@@ -77,7 +77,7 @@ export class AccountsController {
     @Param(ValidationPipe) getAccountDto: GetAccountDto,
   ) {
     this.logger.log(
-      `GET /account/${getAccountDto.accountId}/statement - From: ${getAccountStatementDto.fromDate}, To: ${getAccountStatementDto.toDate}`,
+      `GET /account/${getAccountDto.accountId}/statement - From: ${getAccountStatementDto.fromDate.toISOString()}, To: ${getAccountStatementDto.toDate.toISOString()}`,
     );
     const result = await this.accountsService.getAccountStatement({
       accountId: getAccountDto.accountId,

@@ -86,7 +86,9 @@ export class AccountsService {
     fromDate: Date;
     toDate: Date;
   }): Promise<AccountStatementResultDto> {
-    this.logger.log(`Generating statement for account: ${accountId} from ${fromDate} to ${toDate}`);
+    this.logger.log(
+      `Generating statement for account: ${accountId} from ${fromDate.toISOString()} to ${toDate.toISOString()}`,
+    );
 
     return this.dataSource.transaction(async transaction => {
       const account = await transaction.getRepository(AccountEntity).findOne({
@@ -356,7 +358,9 @@ export class AccountsService {
             'Idempotency key already used with a different operation/amount',
           );
         }
-        this.logger.error(`Error creating transaction: ${e}`);
+        this.logger.error(
+          `Error creating transaction: ${e instanceof Error ? e.message : String(e)}`,
+        );
         throw e;
       }
 

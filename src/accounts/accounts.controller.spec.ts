@@ -13,7 +13,6 @@ import { WithdrawDto } from './dto/withdraw.dto';
 
 describe('AccountsController', () => {
   let controller: AccountsController;
-  let service: jest.Mocked<AccountsService>;
 
   const mockAccountsService = {
     create: jest.fn(),
@@ -44,7 +43,6 @@ describe('AccountsController', () => {
       .compile();
 
     controller = module.get<AccountsController>(AccountsController);
-    service = module.get(AccountsService);
 
     // Reset all mocks
     jest.clearAllMocks();
@@ -55,7 +53,7 @@ describe('AccountsController', () => {
       const userId = 'test-user-id';
       const mockRequest = {
         user: { userId },
-      } as any;
+      } as Request & { user: { userId: string } };
 
       const mockAccount = {
         id: 'account-id',
@@ -66,11 +64,11 @@ describe('AccountsController', () => {
         closedAt: null,
       };
 
-      mockAccountsService.create.mockResolvedValue(mockAccount as any);
+      mockAccountsService.create.mockResolvedValue(mockAccount);
 
       const result = await controller.create(mockRequest);
 
-      expect(service.create).toHaveBeenCalledWith({ userId });
+      expect(mockAccountsService.create).toHaveBeenCalledWith({ userId });
       expect(result).toEqual(mockAccount);
     });
   });
@@ -89,11 +87,11 @@ describe('AccountsController', () => {
         closedAt: null,
       };
 
-      mockAccountsService.findByUserId.mockResolvedValue(mockAccount as any);
+      mockAccountsService.findByUserId.mockResolvedValue(mockAccount);
 
       const result = await controller.getAccount(getAccountDto);
 
-      expect(service.findByUserId).toHaveBeenCalledWith({ accountId });
+      expect(mockAccountsService.findByUserId).toHaveBeenCalledWith({ accountId });
       expect(result).toEqual(mockAccount);
     });
   });
@@ -103,7 +101,7 @@ describe('AccountsController', () => {
       const userId = 'test-user-id';
       const mockRequest = {
         user: { userId },
-      } as any;
+      } as Request & { user: { userId: string } };
 
       const mockAccounts = [
         {
@@ -116,11 +114,11 @@ describe('AccountsController', () => {
         },
       ];
 
-      mockAccountsService.findAllAccounts.mockResolvedValue(mockAccounts as any);
+      mockAccountsService.findAllAccounts.mockResolvedValue(mockAccounts);
 
       const result = await controller.getAllAccounts(mockRequest);
 
-      expect(service.findAllAccounts).toHaveBeenCalledWith({ userId });
+      expect(mockAccountsService.findAllAccounts).toHaveBeenCalledWith({ userId });
       expect(result).toEqual(mockAccounts);
     });
 
@@ -128,13 +126,13 @@ describe('AccountsController', () => {
       const userId = 'test-user-id';
       const mockRequest = {
         user: { userId },
-      } as any;
+      } as Request & { user: { userId: string } };
 
       mockAccountsService.findAllAccounts.mockResolvedValue([]);
 
       const result = await controller.getAllAccounts(mockRequest);
 
-      expect(service.findAllAccounts).toHaveBeenCalledWith({ userId });
+      expect(mockAccountsService.findAllAccounts).toHaveBeenCalledWith({ userId });
       expect(result).toEqual([]);
     });
   });
@@ -171,11 +169,11 @@ describe('AccountsController', () => {
         ],
       };
 
-      mockAccountsService.getAccountStatement.mockResolvedValue(mockStatement as any);
+      mockAccountsService.getAccountStatement.mockResolvedValue(mockStatement);
 
       const result = await controller.getAccountBalance(getAccountStatementDto, getAccountDto);
 
-      expect(service.getAccountStatement).toHaveBeenCalledWith({
+      expect(mockAccountsService.getAccountStatement).toHaveBeenCalledWith({
         accountId,
         fromDate,
         toDate,
@@ -190,7 +188,7 @@ describe('AccountsController', () => {
       const accountId = 'test-account-id';
       const mockRequest = {
         user: { userId },
-      } as any;
+      } as Request & { user: { userId: string } };
 
       const closeAccountDto: CloseAccountDto = { accountId };
 
@@ -203,11 +201,11 @@ describe('AccountsController', () => {
         closedAt: new Date(),
       };
 
-      mockAccountsService.closeAccount.mockResolvedValue(mockClosedAccount as any);
+      mockAccountsService.closeAccount.mockResolvedValue(mockClosedAccount);
 
       const result = await controller.closeAccount(closeAccountDto, mockRequest);
 
-      expect(service.closeAccount).toHaveBeenCalledWith({
+      expect(mockAccountsService.closeAccount).toHaveBeenCalledWith({
         userId,
         accountId,
       });
@@ -223,7 +221,7 @@ describe('AccountsController', () => {
       const amount = 100;
       const mockRequest = {
         user: { userId },
-      } as any;
+      } as Request & { user: { userId: string } };
 
       const depositDto: CreateDepositDto = {
         accountId,
@@ -238,11 +236,11 @@ describe('AccountsController', () => {
         createdAt: new Date(),
       };
 
-      mockAccountsService.deposit.mockResolvedValue(mockDepositResult as any);
+      mockAccountsService.deposit.mockResolvedValue(mockDepositResult);
 
       const result = await controller.deposit(depositDto, mockRequest);
 
-      expect(service.deposit).toHaveBeenCalledWith({
+      expect(mockAccountsService.deposit).toHaveBeenCalledWith({
         userId,
         accountId,
         amount,
@@ -259,7 +257,7 @@ describe('AccountsController', () => {
       const amount = 50;
       const mockRequest = {
         user: { userId },
-      } as any;
+      } as Request & { user: { userId: string } };
 
       const depositDto: CreateDepositDto = {
         accountId,
@@ -273,11 +271,11 @@ describe('AccountsController', () => {
         createdAt: new Date(),
       };
 
-      mockAccountsService.deposit.mockResolvedValue(mockDepositResult as any);
+      mockAccountsService.deposit.mockResolvedValue(mockDepositResult);
 
       const result = await controller.deposit(depositDto, mockRequest);
 
-      expect(service.deposit).toHaveBeenCalledWith({
+      expect(mockAccountsService.deposit).toHaveBeenCalledWith({
         userId,
         accountId,
         amount,
@@ -294,7 +292,7 @@ describe('AccountsController', () => {
       const amount = 50;
       const mockRequest = {
         user: { userId },
-      } as any;
+      } as Request & { user: { userId: string } };
 
       const withdrawDto: WithdrawDto = {
         accountId,
@@ -309,11 +307,11 @@ describe('AccountsController', () => {
         createdAt: new Date(),
       };
 
-      mockAccountsService.withdraw.mockResolvedValue(mockWithdrawResult as any);
+      mockAccountsService.withdraw.mockResolvedValue(mockWithdrawResult);
 
       const result = await controller.withdraw(withdrawDto, mockRequest);
 
-      expect(service.withdraw).toHaveBeenCalledWith({
+      expect(mockAccountsService.withdraw).toHaveBeenCalledWith({
         accountId,
         amount,
         userId,
@@ -330,7 +328,7 @@ describe('AccountsController', () => {
       const amount = 25;
       const mockRequest = {
         user: { userId },
-      } as any;
+      } as Request & { user: { userId: string } };
 
       const withdrawDto: WithdrawDto = {
         accountId,
@@ -344,11 +342,11 @@ describe('AccountsController', () => {
         createdAt: new Date(),
       };
 
-      mockAccountsService.withdraw.mockResolvedValue(mockWithdrawResult as any);
+      mockAccountsService.withdraw.mockResolvedValue(mockWithdrawResult);
 
       const result = await controller.withdraw(withdrawDto, mockRequest);
 
-      expect(service.withdraw).toHaveBeenCalledWith({
+      expect(mockAccountsService.withdraw).toHaveBeenCalledWith({
         accountId,
         amount,
         userId,
