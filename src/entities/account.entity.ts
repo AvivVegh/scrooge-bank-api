@@ -5,13 +5,8 @@ export enum AccountStatus {
   CLOSED = 'closed',
 }
 
-export enum AccountType {
-  CHECKING = 'checking',
-  LOAN = 'loan',
-}
-
 @Entity('accounts')
-@Unique(['userId', 'type'])
+@Unique(['userId'])
 export class AccountEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -24,9 +19,6 @@ export class AccountEntity {
 
   @Column({ type: 'enum', enum: AccountStatus, default: AccountStatus.OPEN })
   status: AccountStatus;
-
-  @Column({ type: 'enum', enum: AccountType, default: AccountType.CHECKING })
-  type: AccountType;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

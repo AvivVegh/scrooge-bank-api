@@ -9,7 +9,7 @@ import {
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { TransactionEntity, TransactionType } from 'src/entities/transaction.entity';
 import { DataSource, EntityManager, Repository } from 'typeorm';
-import { AccountEntity, AccountStatus, AccountType } from '../entities/account.entity';
+import { AccountEntity, AccountStatus } from '../entities/account.entity';
 import { BankLedgerEntity, BankLedgerKind } from '../entities/bank-ledger.entity';
 import { LoanDisbursementEntity } from '../entities/loan-disbursement.entity';
 import { LoanPaymentEntity } from '../entities/loan-payment.entity';
@@ -25,12 +25,6 @@ export class LoansService {
   constructor(
     @InjectDataSource() private readonly ds: DataSource,
     @InjectRepository(LoanEntity) private readonly loanRepo: Repository<LoanEntity>,
-    @InjectRepository(LoanDisbursementEntity)
-    private readonly disbRepo: Repository<LoanDisbursementEntity>,
-    @InjectRepository(LoanPaymentEntity)
-    private readonly paymentRepo: Repository<LoanPaymentEntity>,
-    @InjectRepository(BankLedgerEntity) private readonly ledgerRepo: Repository<BankLedgerEntity>,
-    @InjectRepository(AccountEntity) private readonly accountRepo: Repository<AccountEntity>,
   ) {}
 
   async getLoans({ userId }: { userId: string }): Promise<LoanEntity[]> {
@@ -54,26 +48,14 @@ export class LoansService {
 
       // 2) Validate user has an open account
       const account = await m.getRepository(AccountEntity).findOne({
-        where: { userId, status: AccountStatus.OPEN, type: AccountType.LOAN },
+        where: { userId, status: AccountStatus.OPEN },
       });
 
       if (!account) {
         throw new NotFoundException('User must have an open account to apply for loans');
       }
 
-      // 3) Check if user already has an open loan
-      const existingOpenLoan = await m.getRepository(LoanEntity).findOne({
-        where: {
-          userId,
-          status: LoanStatus.APPROVED,
-        },
-      });
-
-      if (existingOpenLoan) {
-        throw new ConflictException('User already has an open loan');
-      }
-
-      // 4) Idempotency: return previous decision if same key exists
+      // 3) Idempotency: return previous decision if same key exists
       if (idemKey) {
         const existing = await m
           .getRepository(LoanEntity)
@@ -105,7 +87,7 @@ export class LoansService {
         }
       }
 
-      // 5) Compute availability from ledger (snapshot inside this tx)
+      // 4) Compute availability from ledger (snapshot inside this tx)
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const queryResult = await m.query(`
         SELECT
@@ -139,7 +121,7 @@ export class LoansService {
       console.log('  total available:', available);
       console.log('  requested amount:', amount);
 
-      // 6) Approve or reject
+      // 5) Approve or reject
       if (amount <= available) {
         // Approve & disburse immediately (outside bank; no account credit here)
         const loan = await m.getRepository(LoanEntity).save({

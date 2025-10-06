@@ -3,7 +3,6 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { AccountsService } from './accounts.service';
 import { CloseAccountDto } from './dto/close-account.dto';
-import { CreateAccountDto } from './dto/create-account.dto';
 import { CreateDepositDto } from './dto/create-deposit.dto';
 import { DepositResultDto } from './dto/deposit-result.dto';
 import { GetAccountDto } from './dto/get-account.dto';
@@ -21,14 +20,10 @@ export class AccountsController {
   @ApiResponse({ status: 400, description: 'Bad request - validation failed' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 409, description: 'Account already exists for this user' })
-  async create(
-    @Req() req: Request & { user: { userId: string } },
-    @Body(ValidationPipe) createAccountDto: CreateAccountDto,
-  ) {
+  async create(@Req() req: Request & { user: { userId: string } }) {
     console.log('req.user: ', req.user);
     return this.accountsService.create({
       userId: req.user?.userId,
-      accountType: createAccountDto.accountType,
     });
   }
 

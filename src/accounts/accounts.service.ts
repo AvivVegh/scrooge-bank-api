@@ -8,7 +8,7 @@ import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { BankLedgerEntity, BankLedgerKind } from 'src/entities/bank-ledger.entity';
 import { TransactionEntity, TransactionType } from 'src/entities/transaction.entity';
 import { DataSource, Repository } from 'typeorm';
-import { AccountEntity, AccountStatus, AccountType } from '../entities/account.entity';
+import { AccountEntity, AccountStatus } from '../entities/account.entity';
 import { convertToCents } from '../lib/utils';
 import { DepositResultDto } from './dto/deposit-result.dto';
 
@@ -24,14 +24,14 @@ export class AccountsService {
     private bankLedgerRepository: Repository<BankLedgerEntity>,
   ) {}
 
-  async create({ userId, accountType }: { userId: string; accountType: AccountType }) {
+  async create({ userId }: { userId: string }) {
     // Check if account of this type already exists for the user
     const existingAccount = await this.accountsRepository.findOne({
-      where: { userId, type: accountType },
+      where: { userId },
     });
 
     if (existingAccount) {
-      throw new ConflictException(`Account of type ${accountType} already exists for this user`);
+      throw new ConflictException(`Account already exists for this user`);
     }
 
     // Create new account
@@ -39,7 +39,6 @@ export class AccountsService {
       userId,
       balanceCents: 0,
       status: AccountStatus.OPEN,
-      type: accountType,
     });
 
     return await this.accountsRepository.save(account);
@@ -102,11 +101,6 @@ export class AccountsService {
       transactionType: TransactionType.DEPOSIT,
       bankLedgerKind: BankLedgerKind.DEPOSIT,
       balanceModifier: (balance, amount) => balance + amount,
-      additionalValidations: account => {
-        if (account.type === AccountType.LOAN) {
-          throw new BadRequestException('Loan accounts cannot be deposited into');
-        }
-      },
     });
   }
 
