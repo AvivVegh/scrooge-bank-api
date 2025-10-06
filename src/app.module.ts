@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { databaseConfig } from './config/database.config';
+import { LoansModule } from './loans/loans.module';
 
 function envFiles(): string[] {
   return ['.env'];
@@ -22,6 +23,7 @@ function envFiles(): string[] {
     TypeOrmModule.forRoot(databaseConfig),
     AuthModule,
     AccountsModule,
+    LoansModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -9,7 +9,9 @@ import { BankLedgerEntity, BankLedgerKind } from 'src/entities/bank-ledger.entit
 import { TransactionEntity, TransactionType } from 'src/entities/transaction.entity';
 import { DataSource, Repository } from 'typeorm';
 import { AccountEntity, AccountStatus, AccountType } from '../entities/account.entity';
+import { convertToCents } from '../lib/utils';
 import { DepositResultDto } from './dto/deposit-result.dto';
+
 @Injectable()
 export class AccountsService {
   constructor(
@@ -90,7 +92,7 @@ export class AccountsService {
       throw new BadRequestException('Amount must be greater than 0');
     }
 
-    const amountCents = this.convertToCents(amount);
+    const amountCents = convertToCents(amount);
 
     return this.processTransaction({
       userId,
@@ -123,7 +125,7 @@ export class AccountsService {
       throw new BadRequestException('Amount must be greater than 0');
     }
 
-    const amountCents = this.convertToCents(amount);
+    const amountCents = convertToCents(amount);
 
     return this.processTransaction({
       userId,
@@ -262,9 +264,5 @@ export class AccountsService {
         createdAt: tx.createdAt,
       } as DepositResultDto;
     });
-  }
-
-  private convertToCents(amount: number) {
-    return Math.round(amount * 100);
   }
 }
