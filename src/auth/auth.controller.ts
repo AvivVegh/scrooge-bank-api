@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Logger,
   Post,
   Req,
   Res,
@@ -26,7 +27,9 @@ interface AuthenticatedRequest extends Request {
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
   refreshTokenMaxAge: number;
+
   constructor(private authService: AuthService) {
     this.refreshTokenMaxAge = 30 * 24 * 3600 * 1000;
   }
@@ -48,6 +51,8 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: 'Bad request - validation failed' })
   async register(@Body(ValidationPipe) createUserDto: CreateUserDto, @Res() res: Response) {
+    this.logger.log(`POST /auth/register - Email: ${createUserDto.email}`);
+
     const { accessToken, refreshToken } = await this.authService.register(
       createUserDto.email,
       createUserDto.password,
@@ -61,6 +66,7 @@ export class AuthController {
       maxAge: this.refreshTokenMaxAge,
     });
 
+    this.logger.log(`Registration successful for email: ${createUserDto.email}`);
     return res.json({ accessToken });
   }
 
@@ -87,11 +93,15 @@ export class AuthController {
     @Req() req: AuthenticatedRequest,
     @Res() res: Response,
   ) {
+    this.logger.log(`POST /auth/login - Email: ${loginDto.email}`);
+
     if (!req.user) {
+      this.logger.warn(`Login failed: no user in request for ${loginDto.email}`);
       throw new UnauthorizedException();
     }
 
     if (!req.user.id || !req.user.roles) {
+      this.logger.warn(`Login failed: missing user id or roles for ${loginDto.email}`);
       throw new UnauthorizedException();
     }
 
@@ -108,6 +118,7 @@ export class AuthController {
       maxAge: this.refreshTokenMaxAge,
     });
 
+    this.logger.log(`Login successful for user: ${req.user.id}`);
     return res.json({ accessToken });
   }
 
@@ -133,15 +144,18 @@ export class AuthController {
     @Req() req: Request,
     @Res() res: Response,
   ) {
+    this.logger.log(`POST /auth/refresh - User: ${refreshDto.userId}`);
+
     const refreshToken = req.cookies?.['refresh_token'] as string;
-    console.log('refreshToken: ', refreshToken);
     const userId = refreshDto.userId;
 
     if (!refreshToken) {
+      this.logger.warn(`Refresh failed: token not found in cookies for user ${userId}`);
       throw new UnauthorizedException('Refresh token not found in cookies');
     }
 
     if (!userId) {
+      this.logger.warn('Refresh failed: no user ID provided');
       throw new UnauthorizedException('User ID is required');
     }
 
@@ -158,6 +172,7 @@ export class AuthController {
       maxAge: this.refreshTokenMaxAge,
     });
 
+    this.logger.log(`Token refresh successful for user: ${userId}`);
     return res.json({ accessToken });
   }
 }

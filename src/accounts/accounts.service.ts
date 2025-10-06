@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
@@ -16,6 +17,8 @@ import { DepositResultDto } from './dto/deposit-result.dto';
 
 @Injectable()
 export class AccountsService {
+  private readonly logger = new Logger(AccountsService.name);
+
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     @InjectRepository(AccountEntity)
@@ -23,12 +26,15 @@ export class AccountsService {
   ) {}
 
   async create({ userId }: { userId: string }) {
+    this.logger.log(`Creating account for user: ${userId}`);
+
     // Check if account of this type already exists for the user
     const existingAccount = await this.accountsRepository.findOne({
       where: { userId },
     });
 
     if (existingAccount) {
+      this.logger.warn(`Account already exists for user: ${userId}`);
       throw new ConflictException(`Account already exists for this user`);
     }
 
@@ -39,25 +45,36 @@ export class AccountsService {
       status: AccountStatus.OPEN,
     });
 
-    return await this.accountsRepository.save(account);
+    const savedAccount = await this.accountsRepository.save(account);
+    this.logger.log(`Account created successfully: ${savedAccount.id} for user: ${userId}`);
+    return savedAccount;
   }
 
   async findByUserId({ accountId }: { accountId: string }) {
+    this.logger.log(`Finding account: ${accountId}`);
+
     const account = await this.accountsRepository.findOne({
       where: { id: accountId, status: AccountStatus.OPEN },
     });
 
     if (!account) {
+      this.logger.warn(`Account not found: ${accountId}`);
       throw new NotFoundException('Account not found');
     }
 
+    this.logger.log(`Account found: ${accountId}`);
     return account;
   }
 
   async findAllAccounts({ userId }: { userId: string }) {
-    return this.accountsRepository.find({
+    this.logger.log(`Finding all accounts for user: ${userId}`);
+
+    const accounts = await this.accountsRepository.find({
       where: { status: AccountStatus.OPEN, userId },
     });
+
+    this.logger.log(`Found ${accounts.length} accounts for user: ${userId}`);
+    return accounts;
   }
 
   async getAccountStatement({
@@ -69,12 +86,15 @@ export class AccountsService {
     fromDate: Date;
     toDate: Date;
   }): Promise<AccountStatementResultDto> {
+    this.logger.log(`Generating statement for account: ${accountId} from ${fromDate} to ${toDate}`);
+
     return this.dataSource.transaction(async transaction => {
       const account = await transaction.getRepository(AccountEntity).findOne({
         where: { id: accountId, status: AccountStatus.OPEN },
       });
 
       if (!account) {
+        this.logger.warn(`Account not found for statement: ${accountId}`);
         throw new NotFoundException('Account not found');
       }
 
@@ -88,6 +108,10 @@ export class AccountsService {
 
       const balance = account.balanceCents / 100;
 
+      this.logger.log(
+        `Statement generated for account: ${accountId}, transactions: ${transactions.length}, loans: ${loans.length}`,
+      );
+
       return {
         balance,
         loans,
@@ -97,12 +121,15 @@ export class AccountsService {
   }
 
   async closeAccount({ userId, accountId }: { userId: string; accountId: string }) {
+    this.logger.log(`Attempting to close account: ${accountId} for user: ${userId}`);
+
     return this.dataSource.transaction(async transaction => {
       const account = await transaction.getRepository(AccountEntity).findOne({
         where: { id: accountId, status: AccountStatus.OPEN },
       });
 
       if (!account) {
+        this.logger.warn(`Account not found for closure: ${accountId}`);
         throw new NotFoundException('Account not found');
       }
 
@@ -111,16 +138,22 @@ export class AccountsService {
       });
 
       if (loans.length > 0) {
+        this.logger.warn(`Cannot close account ${accountId}: has ${loans.length} active loans`);
         throw new BadRequestException('Account has loans and cannot be closed');
       }
 
       if (account.balanceCents > 0) {
+        this.logger.warn(
+          `Cannot close account ${accountId}: has balance of ${account.balanceCents} cents`,
+        );
         throw new BadRequestException('Account has money and cannot be closed');
       }
 
       account.status = AccountStatus.CLOSED;
       account.closedAt = new Date();
-      return await transaction.getRepository(AccountEntity).save(account);
+      const closedAccount = await transaction.getRepository(AccountEntity).save(account);
+      this.logger.log(`Account closed successfully: ${accountId}`);
+      return closedAccount;
     });
   }
 
@@ -135,13 +168,18 @@ export class AccountsService {
     amount: number;
     idempotencyKey?: string;
   }): Promise<DepositResultDto> {
+    this.logger.log(
+      `Deposit request: ${amount} to account ${accountId} by user ${userId}${idempotencyKey ? ` with idempotency key: ${idempotencyKey}` : ''}`,
+    );
+
     if (amount <= 0) {
+      this.logger.warn(`Invalid deposit amount: ${amount} for account ${accountId}`);
       throw new BadRequestException('Amount must be greater than 0');
     }
 
     const amountCents = convertToCents(amount);
 
-    return this.processTransaction({
+    const result = await this.processTransaction({
       userId,
       accountId,
       amountCents,
@@ -150,6 +188,11 @@ export class AccountsService {
       bankLedgerKind: BankLedgerKind.DEPOSIT,
       balanceModifier: (balance, amount) => balance + amount,
     });
+
+    this.logger.log(
+      `Deposit completed: ${amount} to account ${accountId}, new balance: ${result.newBalanceCents / 100}`,
+    );
+    return result;
   }
 
   async withdraw({
@@ -163,13 +206,18 @@ export class AccountsService {
     userId: string;
     idempotencyKey?: string;
   }): Promise<DepositResultDto> {
+    this.logger.log(
+      `Withdrawal request: ${amount} from account ${accountId} by user ${userId}${idempotencyKey ? ` with idempotency key: ${idempotencyKey}` : ''}`,
+    );
+
     if (amount <= 0) {
+      this.logger.warn(`Invalid withdrawal amount: ${amount} for account ${accountId}`);
       throw new BadRequestException('Amount must be greater than 0');
     }
 
     const amountCents = convertToCents(amount);
 
-    return this.processTransaction({
+    const result = await this.processTransaction({
       userId,
       accountId,
       amountCents,
@@ -179,11 +227,19 @@ export class AccountsService {
       balanceModifier: (balance, amount) => balance - amount,
       additionalValidations: account => {
         if (account.balanceCents < amountCents) {
+          this.logger.warn(
+            `Insufficient funds for withdrawal: account ${accountId}, balance: ${account.balanceCents}, requested: ${amountCents}`,
+          );
           throw new BadRequestException('Insufficient funds');
         }
       },
       ledgerAmountCents: -amountCents, // For withdrawals, we store negative amount in ledger
     });
+
+    this.logger.log(
+      `Withdrawal completed: ${amount} from account ${accountId}, new balance: ${result.newBalanceCents / 100}`,
+    );
+    return result;
   }
 
   private async processTransaction({
@@ -208,6 +264,10 @@ export class AccountsService {
     ledgerAmountCents?: number;
   }): Promise<DepositResultDto> {
     return this.dataSource.transaction(async transaction => {
+      this.logger.debug(
+        `Processing transaction: type=${transactionType}, amount=${amountCents}, account=${accountId}`,
+      );
+
       // 1) Load & lock account; verify ownership + 'open'
       const account = await transaction.getRepository(AccountEntity).findOne({
         where: { id: accountId, userId, status: AccountStatus.OPEN },
@@ -215,6 +275,7 @@ export class AccountsService {
       });
 
       if (!account) {
+        this.logger.warn(`Account not found in processTransaction: ${accountId}`);
         throw new NotFoundException('Account not found');
       }
 
@@ -230,8 +291,14 @@ export class AccountsService {
         });
 
         if (existing) {
+          this.logger.log(
+            `Idempotency key already used: ${idempotencyKey}, returning existing transaction: ${existing.id}`,
+          );
           // Guard: same key used for a different operation/amount? -> 409
           if (existing.type !== transactionType || existing.amountCents !== amountCents) {
+            this.logger.warn(
+              `Idempotency key conflict: ${idempotencyKey}, different operation/amount`,
+            );
             throw new ConflictException(
               'Idempotency key already used with a different operation/amount',
             );
@@ -258,6 +325,7 @@ export class AccountsService {
           idempotencyKey,
           createdByUserId: userId,
         });
+        this.logger.debug(`Transaction entity created: ${tx.id}`);
       } catch (e: unknown) {
         if (
           e &&
@@ -266,11 +334,13 @@ export class AccountsService {
           (e as { code: string }).code === '23505' &&
           idempotencyKey
         ) {
+          this.logger.log(`Duplicate idempotency key detected on save: ${idempotencyKey}`);
           // Unique (account_id, idempotency_key) violated — fetch and reconcile
           const dup = await transaction.getRepository(TransactionEntity).findOne({
             where: { account: { id: accountId }, idempotencyKey },
           });
           if (dup && dup.type === transactionType && dup.amountCents === amountCents) {
+            this.logger.log(`Returning duplicate transaction: ${dup.id}`);
             const fresh = await transaction
               .getRepository(AccountEntity)
               .findOneByOrFail({ id: accountId });
@@ -281,16 +351,20 @@ export class AccountsService {
               createdAt: dup.createdAt,
             } as DepositResultDto;
           }
+          this.logger.warn(`Idempotency key mismatch on duplicate: ${idempotencyKey}`);
           throw new ConflictException(
             'Idempotency key already used with a different operation/amount',
           );
         }
+        this.logger.error(`Error creating transaction: ${e}`);
         throw e;
       }
 
       // 5) Apply balance change
+      const oldBalance = account.balanceCents;
       account.balanceCents = balanceModifier(account.balanceCents, amountCents);
       await transaction.getRepository(AccountEntity).save(account);
+      this.logger.debug(`Balance updated: ${oldBalance} -> ${account.balanceCents}`);
 
       // 6) Append ledger entry
       await transaction.getRepository(BankLedgerEntity).save({
@@ -298,6 +372,10 @@ export class AccountsService {
         amountCents: ledgerAmountCents ?? amountCents,
         transaction: { id: tx.id },
       });
+
+      this.logger.debug(
+        `Transaction completed successfully: ${tx.id}, new balance: ${account.balanceCents}`,
+      );
 
       return {
         transactionId: tx.id,

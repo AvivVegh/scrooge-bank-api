@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Logger,
   Param,
   Post,
   Query,
@@ -23,6 +24,8 @@ import { WithdrawDto } from './dto/withdraw.dto';
 @Controller('account')
 @UseGuards(JwtAuthGuard)
 export class AccountsController {
+  private readonly logger = new Logger(AccountsController.name);
+
   constructor(private accountsService: AccountsService) {}
 
   @Post('create')
@@ -32,10 +35,12 @@ export class AccountsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 409, description: 'Account already exists for this user' })
   async create(@Req() req: Request & { user: { userId: string } }) {
-    console.log('req.user: ', req.user);
-    return this.accountsService.create({
+    this.logger.log(`POST /account/create - User: ${req.user?.userId}`);
+    const result = await this.accountsService.create({
       userId: req.user?.userId,
     });
+    this.logger.log(`Account created: ${result.id} for user: ${req.user?.userId}`);
+    return result;
   }
 
   @Get(':accountId')
@@ -44,8 +49,10 @@ export class AccountsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Account not found' })
   async getAccount(@Param(ValidationPipe) getAccountDto: GetAccountDto) {
-    console.log('getAccountDto: ', getAccountDto);
-    return this.accountsService.findByUserId({ accountId: getAccountDto.accountId });
+    this.logger.log(`GET /account/${getAccountDto.accountId}`);
+    const result = await this.accountsService.findByUserId({ accountId: getAccountDto.accountId });
+    this.logger.log(`Account retrieved: ${getAccountDto.accountId}`);
+    return result;
   }
 
   @Get()
@@ -54,9 +61,10 @@ export class AccountsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Account not found' })
   async getAllAccounts(@Req() req: Request & { user: { userId: string } }) {
-    console.log('req.user: ', req.user);
-    // get all accounts for the user
-    return this.accountsService.findAllAccounts({ userId: req.user?.userId });
+    this.logger.log(`GET /account - User: ${req.user?.userId}`);
+    const result = await this.accountsService.findAllAccounts({ userId: req.user?.userId });
+    this.logger.log(`Retrieved ${result.length} accounts for user: ${req.user?.userId}`);
+    return result;
   }
 
   @Get(':accountId/statement')
@@ -68,11 +76,16 @@ export class AccountsController {
     @Query(ValidationPipe) getAccountStatementDto: GetAccountStatementDto,
     @Param(ValidationPipe) getAccountDto: GetAccountDto,
   ) {
-    return this.accountsService.getAccountStatement({
+    this.logger.log(
+      `GET /account/${getAccountDto.accountId}/statement - From: ${getAccountStatementDto.fromDate}, To: ${getAccountStatementDto.toDate}`,
+    );
+    const result = await this.accountsService.getAccountStatement({
       accountId: getAccountDto.accountId,
       fromDate: getAccountStatementDto.fromDate,
       toDate: getAccountStatementDto.toDate,
     });
+    this.logger.log(`Statement retrieved for account: ${getAccountDto.accountId}`);
+    return result;
   }
 
   @Post('close')
@@ -84,10 +97,15 @@ export class AccountsController {
     @Body(ValidationPipe) closeAccountDto: CloseAccountDto,
     @Req() req: Request & { user: { userId: string } },
   ) {
-    return this.accountsService.closeAccount({
+    this.logger.log(
+      `POST /account/close - Account: ${closeAccountDto.accountId}, User: ${req.user?.userId}`,
+    );
+    const result = await this.accountsService.closeAccount({
       userId: req.user?.userId,
       accountId: closeAccountDto.accountId,
     });
+    this.logger.log(`Account closed: ${closeAccountDto.accountId}`);
+    return result;
   }
 
   @Post('deposit')
@@ -101,12 +119,17 @@ export class AccountsController {
     @Body(ValidationPipe) depositDto: CreateDepositDto,
     @Req() req: Request & { user: { userId: string } },
   ): Promise<DepositResultDto> {
-    return this.accountsService.deposit({
+    this.logger.log(
+      `POST /account/deposit - Account: ${depositDto.accountId}, Amount: ${depositDto.amount}, User: ${req.user?.userId}`,
+    );
+    const result = await this.accountsService.deposit({
       userId: req.user?.userId,
       accountId: depositDto.accountId,
       amount: depositDto.amount,
       idempotencyKey: depositDto.idempotencyKey,
     });
+    this.logger.log(`Deposit completed: ${depositDto.amount} to account ${depositDto.accountId}`);
+    return result;
   }
 
   @Post('withdraw')
@@ -120,11 +143,18 @@ export class AccountsController {
     @Body(ValidationPipe) withdrawDto: WithdrawDto,
     @Req() req: Request & { user: { userId: string } },
   ) {
-    return this.accountsService.withdraw({
+    this.logger.log(
+      `POST /account/withdraw - Account: ${withdrawDto.accountId}, Amount: ${withdrawDto.amount}, User: ${req.user?.userId}`,
+    );
+    const result = await this.accountsService.withdraw({
       accountId: withdrawDto.accountId,
       amount: withdrawDto.amount,
       userId: req.user?.userId,
       idempotencyKey: withdrawDto.idempotencyKey,
     });
+    this.logger.log(
+      `Withdrawal completed: ${withdrawDto.amount} from account ${withdrawDto.accountId}`,
+    );
+    return result;
   }
 }

@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards, ValidationPipe } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Logger,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+  ValidationPipe,
+} from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { ApplyLoanDto } from './dto/loan-apply.dto';
@@ -9,6 +19,8 @@ import { LoansService } from './loans.service';
 @Controller('loan')
 @UseGuards(JwtAuthGuard)
 export class LoansController {
+  private readonly logger = new Logger(LoansController.name);
+
   constructor(private loansService: LoansService) {}
 
   @Get()
@@ -16,7 +28,10 @@ export class LoansController {
   @ApiResponse({ status: 200, description: 'Loans successfully fetched' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getLoans(@Req() req: Request & { user: { userId: string } }) {
-    return this.loansService.getLoans({ userId: req.user?.userId });
+    this.logger.log(`GET /loan - User: ${req.user?.userId}`);
+    const result = await this.loansService.getLoans({ userId: req.user?.userId });
+    this.logger.log(`Retrieved ${result.length} loans for user: ${req.user?.userId}`);
+    return result;
   }
 
   @Post('apply')
@@ -29,12 +44,14 @@ export class LoansController {
     @Req() req: Request & { user: { userId: string } },
     @Body(ValidationPipe) applyLoanDto: ApplyLoanDto,
   ) {
-    console.log('req.user: ', req.user);
-    return this.loansService.applyForLoan({
+    this.logger.log(`POST /loan/apply - User: ${req.user?.userId}, Amount: ${applyLoanDto.amount}`);
+    const result = await this.loansService.applyForLoan({
       userId: req.user?.userId,
       amount: applyLoanDto.amount,
       idemKey: applyLoanDto.idempotencyKey,
     });
+    this.logger.log(`Loan application result: ${result.status} for user: ${req.user?.userId}`);
+    return result;
   }
 
   @Post(':loanId/payment/:paymentId')
@@ -48,12 +65,19 @@ export class LoansController {
     @Req() req: Request & { user: { userId: string } },
     @Body(ValidationPipe) loanPaymentDto: LoanPaymentDto,
   ) {
-    return this.loansService.loanPayment({
+    this.logger.log(
+      `POST /loan/${loanId}/payment/${paymentId} - User: ${req.user?.userId}, Amount: ${loanPaymentDto.amount}, Account: ${loanPaymentDto.fromAccountId}`,
+    );
+    const result = await this.loansService.loanPayment({
       userId: req.user?.userId,
       amount: loanPaymentDto.amount,
       fromAccountId: loanPaymentDto.fromAccountId,
       loanId: loanId,
       paymentId: paymentId,
     });
+    this.logger.log(
+      `Loan payment completed: ${paymentId} for loan ${loanId}, remaining: ${result.remainingCents}`,
+    );
+    return result;
   }
 }
