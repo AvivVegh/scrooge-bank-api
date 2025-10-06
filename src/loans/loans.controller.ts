@@ -1,7 +1,10 @@
-import { Body, Controller, Post, Req, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Param, Post, Req, UseGuards, ValidationPipe } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { ApplyLoanDto } from './dto/loan-apply.dto';
+import { LoanPaymentIdDto } from './dto/loan-payment-id.dto';
+import { LoanPaymentLoanDto } from './dto/loan-payment-loan.dto copy';
+import { LoanPaymentDto } from './dto/loan-payment.dto';
 import { LoansService } from './loans.service';
 
 @ApiTags('Loan')
@@ -25,6 +28,26 @@ export class LoansController {
       userId: req.user?.userId,
       amount: applyLoanDto.amount,
       idemKey: applyLoanDto.idempotencyKey,
+    });
+  }
+
+  @Post(':loanId/payments:paymentId')
+  @ApiOperation({ summary: 'Make a payment for a loan' })
+  @ApiResponse({ status: 200, description: 'Payment made successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'User or loan not found' })
+  async payment(
+    @Param(ValidationPipe) loanPaymentLoanDto: LoanPaymentLoanDto,
+    @Param(ValidationPipe) loanPaymentIdDto: LoanPaymentIdDto,
+    @Req() req: Request & { user: { userId: string } },
+    @Body(ValidationPipe) loanPaymentDto: LoanPaymentDto,
+  ) {
+    return this.loansService.loanPayment({
+      userId: req.user?.userId,
+      amount: loanPaymentDto.amount,
+      fromAccountId: loanPaymentDto.fromAccountId,
+      loanId: loanPaymentLoanDto.loanId,
+      paymentId: loanPaymentIdDto.paymentId,
     });
   }
 }

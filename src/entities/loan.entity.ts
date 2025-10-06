@@ -4,6 +4,7 @@ export enum LoanStatus {
   PENDING = 'pending',
   APPROVED = 'approved',
   REJECTED = 'rejected',
+  CLOSED = 'closed',
 }
 
 @Entity('loans')

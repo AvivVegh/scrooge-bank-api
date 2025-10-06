@@ -1,7 +1,14 @@
 // src/loans/loans.service.ts
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { TransactionEntity, TransactionType } from 'src/entities/transaction.entity';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { AccountEntity, AccountStatus, AccountType } from '../entities/account.entity';
 import { BankLedgerEntity, BankLedgerKind } from '../entities/bank-ledger.entity';
 import { LoanDisbursementEntity } from '../entities/loan-disbursement.entity';
@@ -9,6 +16,7 @@ import { LoanPaymentEntity } from '../entities/loan-payment.entity';
 import { LoanEntity, LoanStatus } from '../entities/loan.entity';
 import { convertToCents } from '../lib/utils';
 import { ApplyLoanResultDto } from './dto/loan-apply-result.dto';
+import { LoanPaymentResultDto } from './dto/loan-payment-result.dto';
 
 @Injectable()
 export class LoansService {
@@ -163,5 +171,147 @@ export class LoansService {
         } as ApplyLoanResultDto;
       }
     });
+  }
+
+  async loanPayment({
+    userId,
+    amount,
+    loanId,
+    paymentId,
+    fromAccountId,
+  }: {
+    userId: string;
+    amount: number;
+    loanId: string;
+    paymentId: string;
+    fromAccountId: string;
+  }): Promise<LoanPaymentResultDto> {
+    const amountCents = convertToCents(amount);
+    return this.ds.transaction(async m => {
+      // Serialize payments for this loan (prevents race overpayment)
+      await m.query('SELECT pg_advisory_xact_lock($1, hashtext($2))', [1, loanId]);
+
+      // If this paymentId already exists, return it (idempotent PUT)
+      const existing = await m
+        .getRepository(LoanPaymentEntity)
+        .findOne({ where: { id: paymentId } });
+      if (existing) {
+        const { due } = await this.calcDue(m, loanId);
+        return {
+          paymentId: existing.id,
+          loanId,
+          amountCents: existing.amountCents,
+          remainingCents: due,
+          occurredAt: existing.createdAt,
+        } as LoanPaymentResultDto;
+      }
+
+      // Load + lock loan and compute due
+      const loan = await m
+        .getRepository(LoanEntity)
+        .createQueryBuilder('l')
+        .setLock('pessimistic_write')
+        .where('l.id = :id AND l.userId = :uid', { id: loanId, uid: userId })
+        .getOne();
+      if (!loan) {
+        throw new NotFoundException('Loan not found');
+      }
+      if (loan.status === LoanStatus.CLOSED) {
+        throw new ForbiddenException('Loan already closed');
+      }
+
+      const { due } = await this.calcDue(m, loanId);
+      if (amount > due) {
+        throw new BadRequestException('Overpayment not allowed');
+      }
+
+      if (fromAccountId) {
+        // INTERNAL: withdraw from checking
+        const acct = await m
+          .getRepository(AccountEntity)
+          .createQueryBuilder('a')
+          .setLock('pessimistic_write')
+          .where('a.id = :id', { id: fromAccountId })
+          .getOne();
+        if (!acct || acct.userId !== userId || acct.status !== AccountStatus.OPEN)
+          throw new ForbiddenException('Invalid source account');
+        if (BigInt(acct.balanceCents) < amount) {
+          throw new BadRequestException('Insufficient funds');
+        }
+
+        // Create a withdrawal transaction (no idem column needed)
+        // If two requests with same paymentId race, only one payment row will win the PK insert;
+        // we run all writes in ONE DB transaction so partial states don't commit.
+        const wtx = await m.getRepository(TransactionEntity).save({
+          account: { id: fromAccountId },
+          type: TransactionType.WITHDRAWAL,
+          amountCents: amountCents,
+        });
+
+        // Decrement balance + ledger withdrawal
+        acct.balanceCents = acct.balanceCents - amountCents;
+        await m.getRepository(AccountEntity).save(acct);
+        await m.getRepository(BankLedgerEntity).save({
+          kind: BankLedgerKind.WITHDRAWAL,
+          amountCents: -amountCents,
+          transaction: { id: wtx.id },
+        });
+
+        // Insert payment using client-supplied ID (idempotency via PK)
+        const pay = await m.getRepository(LoanPaymentEntity).save({
+          id: paymentId, // <-- key point
+          loan: { id: loanId },
+          amountCents: amountCents,
+          paidFromAccountId: fromAccountId,
+        });
+
+        await m.getRepository(BankLedgerEntity).save({
+          kind: BankLedgerKind.LOAN_PAYMENT,
+          amountCents: amountCents,
+          loan_payment: { id: pay.id },
+        });
+      }
+
+      // Close loan if fully paid
+      if (amount === due) {
+        await m
+          .getRepository(LoanEntity)
+          .update({ id: loanId }, { status: LoanStatus.CLOSED, decisionAt: new Date() });
+      }
+
+      const { due: remaining } = await this.calcDue(m, loanId);
+
+      return {
+        paymentId,
+        loanId,
+        amountCents: amountCents,
+        remainingCents: remaining,
+        occurredAt: new Date(),
+      } as LoanPaymentResultDto;
+    });
+  }
+  private async calcDue(
+    m: EntityManager,
+    loanId: string,
+  ): Promise<{ drawn: number; repaid: number; due: number }> {
+    const disbursedResult = await m
+      .getRepository(LoanDisbursementEntity)
+      .createQueryBuilder('d')
+      .select('COALESCE(SUM(d.amount_cents), 0)', 'disbursed')
+      .where('d.loan_id = :loanId', { loanId })
+      .getRawOne<{ disbursed: string }>();
+
+    const repaidResult = await m
+      .getRepository(LoanPaymentEntity)
+      .createQueryBuilder('p')
+      .select('COALESCE(SUM(p.amount_cents), 0)', 'repaid')
+      .where('p.loan_id = :loanId', { loanId })
+      .getRawOne<{ repaid: string }>();
+
+    const drawn = parseInt(disbursedResult?.disbursed ?? '0');
+    const paid = parseInt(repaidResult?.repaid ?? '0');
+    const due = drawn > paid ? drawn - paid : 0;
+
+    return { drawn, repaid: paid, due };
   }
 }
