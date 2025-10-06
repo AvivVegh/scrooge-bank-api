@@ -48,6 +48,15 @@ export class AccountsController {
     return this.accountsService.findAllAccounts({ userId: req.user?.userId });
   }
 
+  @Get(':accountId/statement')
+  @ApiOperation({ summary: 'Get account statement' })
+  @ApiResponse({ status: 200, description: 'Account statement retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Account not found' })
+  async getAccountBalance(@Param(ValidationPipe) getAccountDto: GetAccountDto) {
+    return this.accountsService.getAccountStatement({ accountId: getAccountDto.accountId });
+  }
+
   @Post('close')
   @ApiOperation({ summary: 'Close account' })
   @ApiResponse({ status: 200, description: 'Account closed successfully' })

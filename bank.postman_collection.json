@@ -1,0 +1,760 @@
+{
+  "info": {
+    "_postman_id": "134c7c61-4b1b-470e-b01a-414442c89e0b",
+    "name": "Scrooge Bank API Collection",
+    "description": "Scrooge Bank API Collection - Generic and Reusable\n\nThis collection uses variables to make it more flexible and reusable:\n\n**Collection Variables:**\n- `baseUrl`: API base URL (default: http://localhost:3001)\n- `accessToken`: JWT access token (auto-set from login/register response)\n- `refreshToken`: JWT refresh token (auto-set from login/register response)\n- `userId`: User ID (auto-extracted from JWT token)\n- `accountId`: Account ID (auto-set from create account response)\n- `loanId`: Loan ID (auto-set from loan apply response)\n- `email`: User email (default: user@example.com)\n- `password`: User password (default: password123)\n- `amount`: Transaction amount (default: 1000)\n- `loanAmount`: Loan amount (default: 100)\n\n**Usage:**\n1. Set your `baseUrl` variable to point to your API server\n2. Update `email` and `password` variables with your credentials\n3. Run the **login** or **register** request - this will automatically:\n   - Set `accessToken` for authenticated requests\n   - Set `refreshToken` for token rotation\n   - Extract and set `userId` from the JWT token\n4. Run **create account** to automatically set `accountId`\n5. Run **loan apply** to automatically set `loanId`\n6. All authenticated requests automatically use `{{accessToken}}`\n7. Use **refresh** request to rotate tokens when access token expires\n\n**Auto-Set Variables:**\nThe collection automatically captures and sets variables from API responses:\n- Login/Register → `accessToken`, `refreshToken`, `userId`\n- Create Account → `accountId`\n- Loan Apply → `loanId`\n- Refresh → new `accessToken` and `refreshToken`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "14788046"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "accountId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "loanId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "user@example.com",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "password123",
+      "type": "string"
+    },
+    {
+      "key": "amount",
+      "value": "1000",
+      "type": "string"
+    },
+    {
+      "key": "loanAmount",
+      "value": "100",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-set baseUrl from environment if not already set",
+          "if (!pm.collectionVariables.get('baseUrl')) {",
+          "    pm.collectionVariables.set('baseUrl', 'http://localhost:3001');",
+          "}",
+          "",
+          "// Auto-set email and password from environment if not already set",
+          "if (!pm.collectionVariables.get('email')) {",
+          "    pm.collectionVariables.set('email', 'user@example.com');",
+          "}",
+          "if (!pm.collectionVariables.get('password')) {",
+          "    pm.collectionVariables.set('password', 'password123');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "account",
+      "item": [
+        {
+          "name": "get account",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/account",
+              "protocol": "http",
+              "host": ["{{baseUrl}}"],
+              "path": ["account"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get account statement",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account/{{accountId}}/statement",
+              "protocol": "http",
+              "host": ["{{baseUrl}}"],
+              "path": ["account", "{{accountId}}", "statement"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get all accounts",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account",
+              "protocol": "http",
+              "host": ["{{baseUrl}}"],
+              "path": ["account"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "create account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.id) {",
+                  "        pm.collectionVariables.set('accountId', response.id);",
+                  "    } else if (response.account && response.account.id) {",
+                  "        pm.collectionVariables.set('accountId', response.account.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/account/create",
+              "protocol": "http",
+              "host": ["{{baseUrl}}"],
+              "path": ["account", "create"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "deposit to account",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"accountId\": \"{{accountId}}\",\n    \"amount\": {{amount}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/account/deposit",
+              "protocol": "http",
+              "host": ["{{baseUrl}}"],
+              "path": ["account", "deposit"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "withdraw from account",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"accountId\": \"{{accountId}}\",\n    \"amount\": {{amount}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/account/withdraw",
+              "protocol": "http",
+              "host": ["{{baseUrl}}"],
+              "path": ["account", "withdraw"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "close account",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"accountId\": \"{{accountId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/account/close",
+              "protocol": "http",
+              "host": ["{{baseUrl}}"],
+              "path": ["account", "close"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "auth",
+      "item": [
+        {
+          "name": "register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Automatically set accessToken, refreshToken, and userId from register response",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    ",
+                  "    // Set access token",
+                  "    if (response.accessToken) {",
+                  "        pm.collectionVariables.set('accessToken', response.accessToken);",
+                  "        console.log('✅ Access token set successfully');",
+                  "        ",
+                  "        // Decode JWT to extract userId",
+                  "        try {",
+                  "            const tokenParts = response.accessToken.split('.');",
+                  "            if (tokenParts.length === 3) {",
+                  "                const payload = JSON.parse(atob(tokenParts[1]));",
+                  "                if (payload.sub) {",
+                  "                    pm.collectionVariables.set('userId', payload.sub);",
+                  "                    console.log('✅ User ID extracted from token:', payload.sub);",
+                  "                }",
+                  "            }",
+                  "        } catch (e) {",
+                  "            console.error('❌ Failed to decode JWT token:', e);",
+                  "        }",
+                  "    }",
+                  "    ",
+                  "    // Set refresh token",
+                  "    if (response.refreshToken) {",
+                  "        pm.collectionVariables.set('refreshToken', response.refreshToken);",
+                  "        console.log('✅ Refresh token set successfully');",
+                  "    }",
+                  "    ",
+                  "    // Fallback: check if user object exists in response",
+                  "    if (response.user && response.user.id) {",
+                  "        pm.collectionVariables.set('userId', response.user.id);",
+                  "        console.log('✅ User ID set from response.user.id');",
+                  "    }",
+                  "} else {",
+                  "    console.error('❌ Registration failed with status:', pm.response.code);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "protocol": "http",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Automatically set accessToken, refreshToken, and userId from login response",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    ",
+                  "    // Set access token",
+                  "    if (response.accessToken) {",
+                  "        pm.collectionVariables.set('accessToken', response.accessToken);",
+                  "        console.log('✅ Access token set successfully');",
+                  "        ",
+                  "        // Decode JWT to extract userId",
+                  "        try {",
+                  "            const tokenParts = response.accessToken.split('.');",
+                  "            if (tokenParts.length === 3) {",
+                  "                const payload = JSON.parse(atob(tokenParts[1]));",
+                  "                if (payload.sub) {",
+                  "                    pm.collectionVariables.set('userId', payload.sub);",
+                  "                    console.log('✅ User ID extracted from token:', payload.sub);",
+                  "                }",
+                  "            }",
+                  "        } catch (e) {",
+                  "            console.error('❌ Failed to decode JWT token:', e);",
+                  "        }",
+                  "    }",
+                  "    ",
+                  "    // Set refresh token",
+                  "    if (response.refreshToken) {",
+                  "        pm.collectionVariables.set('refreshToken', response.refreshToken);",
+                  "        console.log('✅ Refresh token set successfully');",
+                  "    }",
+                  "    ",
+                  "    // Fallback: check if user object exists in response",
+                  "    if (response.user && response.user.id) {",
+                  "        pm.collectionVariables.set('userId', response.user.id);",
+                  "        console.log('✅ User ID set from response.user.id');",
+                  "    }",
+                  "} else {",
+                  "    console.error('❌ Login failed with status:', pm.response.code);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "protocol": "http",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "refresh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Automatically set new accessToken and refreshToken from refresh response",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    ",
+                  "    // Set new access token",
+                  "    if (response.accessToken) {",
+                  "        pm.collectionVariables.set('accessToken', response.accessToken);",
+                  "        console.log('✅ Access token refreshed successfully');",
+                  "    }",
+                  "    ",
+                  "    // Set new refresh token",
+                  "    if (response.refreshToken) {",
+                  "        pm.collectionVariables.set('refreshToken', response.refreshToken);",
+                  "        console.log('✅ Refresh token rotated successfully');",
+                  "    }",
+                  "} else {",
+                  "    console.error('❌ Token refresh failed with status:', pm.response.code);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "protocol": "http",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "loan",
+      "item": [
+        {
+          "name": "loan apply",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.id) {",
+                  "        pm.collectionVariables.set('loanId', response.id);",
+                  "    } else if (response.loan && response.loan.id) {",
+                  "        pm.collectionVariables.set('loanId', response.loan.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"amount\": {{loanAmount}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/loan/apply",
+              "protocol": "http",
+              "host": ["{{baseUrl}}"],
+              "path": ["loan", "apply"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get loans",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loan",
+              "protocol": "http",
+              "host": ["{{baseUrl}}"],
+              "path": ["loan"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "pay loan",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"amount\": {{loanAmount}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/loan/{{loanId}}/payment",
+              "protocol": "http",
+              "host": ["{{baseUrl}}"],
+              "path": ["loan", "{{loanId}}", "payment"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

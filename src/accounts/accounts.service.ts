@@ -11,6 +11,7 @@ import { TransactionEntity, TransactionType } from 'src/entities/transaction.ent
 import { DataSource, Repository } from 'typeorm';
 import { AccountEntity, AccountStatus } from '../entities/account.entity';
 import { convertToCents } from '../lib/utils';
+import { AccountStatementResultDto } from './dto/account-statement-result.dto';
 import { DepositResultDto } from './dto/deposit-result.dto';
 
 @Injectable()
@@ -19,12 +20,6 @@ export class AccountsService {
     @InjectDataSource() private readonly dataSource: DataSource,
     @InjectRepository(AccountEntity)
     private accountsRepository: Repository<AccountEntity>,
-    @InjectRepository(TransactionEntity)
-    private transactionsRepository: Repository<TransactionEntity>,
-    @InjectRepository(BankLedgerEntity)
-    private bankLedgerRepository: Repository<BankLedgerEntity>,
-    @InjectRepository(LoanEntity)
-    private loansRepository: Repository<LoanEntity>,
   ) {}
 
   async create({ userId }: { userId: string }) {
@@ -62,6 +57,38 @@ export class AccountsService {
   async findAllAccounts({ userId }: { userId: string }) {
     return this.accountsRepository.find({
       where: { status: AccountStatus.OPEN, userId },
+    });
+  }
+
+  async getAccountStatement({
+    accountId,
+  }: {
+    accountId: string;
+  }): Promise<AccountStatementResultDto> {
+    return this.dataSource.transaction(async transaction => {
+      const account = await transaction.getRepository(AccountEntity).findOne({
+        where: { id: accountId, status: AccountStatus.OPEN },
+      });
+
+      if (!account) {
+        throw new NotFoundException('Account not found');
+      }
+
+      const loans = await transaction.getRepository(LoanEntity).find({
+        where: { userId: account.userId, status: LoanStatus.APPROVED },
+      });
+
+      const transactions = await transaction.getRepository(TransactionEntity).find({
+        where: { account: { id: accountId } },
+      });
+
+      const balance = account.balanceCents / 100;
+
+      return {
+        balance,
+        loans,
+        transactions,
+      } as AccountStatementResultDto;
     });
   }
 
