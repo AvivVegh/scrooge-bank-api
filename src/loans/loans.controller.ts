@@ -1,9 +1,7 @@
-import { Body, Controller, Param, Post, Req, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UseGuards, ValidationPipe } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { ApplyLoanDto } from './dto/loan-apply.dto';
-import { LoanPaymentIdDto } from './dto/loan-payment-id.dto';
-import { LoanPaymentLoanDto } from './dto/loan-payment-loan.dto copy';
 import { LoanPaymentDto } from './dto/loan-payment.dto';
 import { LoansService } from './loans.service';
 
@@ -12,6 +10,14 @@ import { LoansService } from './loans.service';
 @UseGuards(JwtAuthGuard)
 export class LoansController {
   constructor(private loansService: LoansService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Get all loans' })
+  @ApiResponse({ status: 200, description: 'Loans successfully fetched' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getLoans(@Req() req: Request & { user: { userId: string } }) {
+    return this.loansService.getLoans({ userId: req.user?.userId });
+  }
 
   @Post('apply')
   @ApiOperation({ summary: 'Apply for a new loan' })
@@ -31,14 +37,14 @@ export class LoansController {
     });
   }
 
-  @Post(':loanId/payments:paymentId')
+  @Post(':loanId/payment/:paymentId')
   @ApiOperation({ summary: 'Make a payment for a loan' })
   @ApiResponse({ status: 200, description: 'Payment made successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'User or loan not found' })
   async payment(
-    @Param(ValidationPipe) loanPaymentLoanDto: LoanPaymentLoanDto,
-    @Param(ValidationPipe) loanPaymentIdDto: LoanPaymentIdDto,
+    @Param('loanId') loanId: string,
+    @Param('paymentId') paymentId: string,
     @Req() req: Request & { user: { userId: string } },
     @Body(ValidationPipe) loanPaymentDto: LoanPaymentDto,
   ) {
@@ -46,8 +52,8 @@ export class LoansController {
       userId: req.user?.userId,
       amount: loanPaymentDto.amount,
       fromAccountId: loanPaymentDto.fromAccountId,
-      loanId: loanPaymentLoanDto.loanId,
-      paymentId: loanPaymentIdDto.paymentId,
+      loanId: loanId,
+      paymentId: paymentId,
     });
   }
 }

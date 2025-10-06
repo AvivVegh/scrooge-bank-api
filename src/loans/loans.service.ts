@@ -33,6 +33,10 @@ export class LoansService {
     @InjectRepository(AccountEntity) private readonly accountRepo: Repository<AccountEntity>,
   ) {}
 
+  async getLoans({ userId }: { userId: string }): Promise<LoanEntity[]> {
+    return this.loanRepo.find({ where: { userId } });
+  }
+
   async applyForLoan({
     userId,
     amount,
@@ -57,7 +61,19 @@ export class LoansService {
         throw new NotFoundException('User must have an open account to apply for loans');
       }
 
-      // 3) Idempotency: return previous decision if same key exists
+      // 3) Check if user already has an open loan
+      const existingOpenLoan = await m.getRepository(LoanEntity).findOne({
+        where: {
+          userId,
+          status: LoanStatus.APPROVED,
+        },
+      });
+
+      if (existingOpenLoan) {
+        throw new ConflictException('User already has an open loan');
+      }
+
+      // 4) Idempotency: return previous decision if same key exists
       if (idemKey) {
         const existing = await m
           .getRepository(LoanEntity)
@@ -89,7 +105,7 @@ export class LoansService {
         }
       }
 
-      // 4) Compute availability from ledger (snapshot inside this tx)
+      // 5) Compute availability from ledger (snapshot inside this tx)
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const queryResult = await m.query(`
         SELECT
@@ -123,7 +139,7 @@ export class LoansService {
       console.log('  total available:', available);
       console.log('  requested amount:', amount);
 
-      // 5) Approve or reject
+      // 6) Approve or reject
       if (amount <= available) {
         // Approve & disburse immediately (outside bank; no account credit here)
         const loan = await m.getRepository(LoanEntity).save({
@@ -206,6 +222,12 @@ export class LoansService {
         } as LoanPaymentResultDto;
       }
 
+      console.log('loanId: ', loanId);
+      console.log('paymentId: ', paymentId);
+      console.log('fromAccountId: ', fromAccountId);
+      console.log('amount: ', amount);
+      console.log('userId: ', userId);
+
       // Load + lock loan and compute due
       const loan = await m
         .getRepository(LoanEntity)
@@ -225,55 +247,56 @@ export class LoansService {
         throw new BadRequestException('Overpayment not allowed');
       }
 
-      if (fromAccountId) {
-        // INTERNAL: withdraw from checking
-        const acct = await m
-          .getRepository(AccountEntity)
-          .createQueryBuilder('a')
-          .setLock('pessimistic_write')
-          .where('a.id = :id', { id: fromAccountId })
-          .getOne();
-        if (!acct || acct.userId !== userId || acct.status !== AccountStatus.OPEN)
-          throw new ForbiddenException('Invalid source account');
-        if (BigInt(acct.balanceCents) < amount) {
-          throw new BadRequestException('Insufficient funds');
-        }
-
-        // Create a withdrawal transaction (no idem column needed)
-        // If two requests with same paymentId race, only one payment row will win the PK insert;
-        // we run all writes in ONE DB transaction so partial states don't commit.
-        const wtx = await m.getRepository(TransactionEntity).save({
-          account: { id: fromAccountId },
-          type: TransactionType.WITHDRAWAL,
-          amountCents: amountCents,
-        });
-
-        // Decrement balance + ledger withdrawal
-        acct.balanceCents = acct.balanceCents - amountCents;
-        await m.getRepository(AccountEntity).save(acct);
-        await m.getRepository(BankLedgerEntity).save({
-          kind: BankLedgerKind.WITHDRAWAL,
-          amountCents: -amountCents,
-          transaction: { id: wtx.id },
-        });
-
-        // Insert payment using client-supplied ID (idempotency via PK)
-        const pay = await m.getRepository(LoanPaymentEntity).save({
-          id: paymentId, // <-- key point
-          loan: { id: loanId },
-          amountCents: amountCents,
-          paidFromAccountId: fromAccountId,
-        });
-
-        await m.getRepository(BankLedgerEntity).save({
-          kind: BankLedgerKind.LOAN_PAYMENT,
-          amountCents: amountCents,
-          loan_payment: { id: pay.id },
-        });
+      // INTERNAL: withdraw from checking
+      const acct = await m
+        .getRepository(AccountEntity)
+        .createQueryBuilder('a')
+        .setLock('pessimistic_write')
+        .where('a.id = :id', { id: fromAccountId })
+        .getOne();
+      if (!acct || acct.userId !== userId || acct.status !== AccountStatus.OPEN)
+        throw new ForbiddenException('Invalid source account');
+      if (BigInt(acct.balanceCents) < amount) {
+        throw new BadRequestException('Insufficient funds');
       }
 
+      // Create a withdrawal transaction (no idem column needed)
+      // If two requests with same paymentId race, only one payment row will win the PK insert;
+      // we run all writes in ONE DB transaction so partial states don't commit.
+      const wtx = await m.getRepository(TransactionEntity).save({
+        account: { id: fromAccountId },
+        type: TransactionType.WITHDRAWAL,
+        amountCents: amountCents,
+        createdByUserId: userId,
+        idempotencyKey: paymentId,
+      });
+
+      // Decrement balance + ledger withdrawal
+      acct.balanceCents = acct.balanceCents - amountCents;
+      await m.getRepository(AccountEntity).save(acct);
+      await m.getRepository(BankLedgerEntity).save({
+        kind: BankLedgerKind.WITHDRAWAL,
+        amountCents: -amountCents,
+        transaction: { id: wtx.id },
+      });
+
+      // Insert payment using client-supplied ID (idempotency via PK)
+      const pay = await m.getRepository(LoanPaymentEntity).save({
+        id: paymentId, // <-- key point
+        loan: { id: loanId },
+        amountCents: amountCents,
+        paidFromAccountId: fromAccountId,
+      });
+
+      await m.getRepository(BankLedgerEntity).save({
+        kind: BankLedgerKind.LOAN_PAYMENT,
+        amountCents: amountCents,
+        loanPayment: { id: pay.id },
+      });
+
       // Close loan if fully paid
-      if (amount === due) {
+
+      if (amountCents === due) {
         await m
           .getRepository(LoanEntity)
           .update({ id: loanId }, { status: LoanStatus.CLOSED, decisionAt: new Date() });
