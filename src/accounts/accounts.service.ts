@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { BankLedgerEntity, BankLedgerKind } from 'src/entities/bank-ledger.entity';
+import { LoanEntity, LoanStatus } from 'src/entities/loan.entity';
 import { TransactionEntity, TransactionType } from 'src/entities/transaction.entity';
 import { DataSource, Repository } from 'typeorm';
 import { AccountEntity, AccountStatus } from '../entities/account.entity';
@@ -22,6 +23,8 @@ export class AccountsService {
     private transactionsRepository: Repository<TransactionEntity>,
     @InjectRepository(BankLedgerEntity)
     private bankLedgerRepository: Repository<BankLedgerEntity>,
+    @InjectRepository(LoanEntity)
+    private loansRepository: Repository<LoanEntity>,
   ) {}
 
   async create({ userId }: { userId: string }) {
@@ -62,18 +65,32 @@ export class AccountsService {
     });
   }
 
-  async closeAccount({ accountId }: { accountId: string }) {
-    const account = await this.accountsRepository.findOne({
-      where: { id: accountId },
+  async closeAccount({ userId, accountId }: { userId: string; accountId: string }) {
+    return this.dataSource.transaction(async transaction => {
+      const account = await transaction.getRepository(AccountEntity).findOne({
+        where: { id: accountId, status: AccountStatus.OPEN },
+      });
+
+      if (!account) {
+        throw new NotFoundException('Account not found');
+      }
+
+      const loans = await transaction.getRepository(LoanEntity).find({
+        where: { userId, status: LoanStatus.APPROVED },
+      });
+
+      if (loans.length > 0) {
+        throw new BadRequestException('Account has loans and cannot be closed');
+      }
+
+      if (account.balanceCents > 0) {
+        throw new BadRequestException('Account has money and cannot be closed');
+      }
+
+      account.status = AccountStatus.CLOSED;
+      account.closedAt = new Date();
+      return await transaction.getRepository(AccountEntity).save(account);
     });
-
-    if (!account) {
-      throw new NotFoundException('Account not found');
-    }
-
-    account.status = AccountStatus.CLOSED;
-    account.closedAt = new Date();
-    return await this.accountsRepository.save(account);
   }
 
   async deposit({

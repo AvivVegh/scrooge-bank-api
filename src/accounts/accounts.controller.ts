@@ -53,8 +53,14 @@ export class AccountsController {
   @ApiResponse({ status: 200, description: 'Account closed successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Account not found' })
-  async closeAccount(@Body(ValidationPipe) closeAccountDto: CloseAccountDto) {
-    return this.accountsService.closeAccount({ accountId: closeAccountDto.accountId });
+  async closeAccount(
+    @Body(ValidationPipe) closeAccountDto: CloseAccountDto,
+    @Req() req: Request & { user: { userId: string } },
+  ) {
+    return this.accountsService.closeAccount({
+      userId: req.user?.userId,
+      accountId: closeAccountDto.accountId,
+    });
   }
 
   @Post('deposit')
