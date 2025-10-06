@@ -1,4 +1,3 @@
-// src/loans/loans.service.ts
 import {
   BadRequestException,
   ConflictException,
@@ -7,13 +6,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { TransactionEntity, TransactionType } from 'src/entities/transaction.entity';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { AccountEntity, AccountStatus } from '../entities/account.entity';
 import { BankLedgerEntity, BankLedgerKind } from '../entities/bank-ledger.entity';
 import { LoanDisbursementEntity } from '../entities/loan-disbursement.entity';
 import { LoanPaymentEntity } from '../entities/loan-payment.entity';
 import { LoanEntity, LoanStatus } from '../entities/loan.entity';
+import { TransactionEntity, TransactionType } from '../entities/transaction.entity';
 import { convertToCents } from '../lib/utils';
 import { ApplyLoanResultDto } from './dto/loan-apply-result.dto';
 import { LoanPaymentResultDto } from './dto/loan-payment-result.dto';

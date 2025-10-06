@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { randomUUID } from 'crypto';
 import { add } from 'date-fns';
-import { UserRole } from 'src/entities/users.entity';
+import { UserRole } from '../entities/users.entity';
 import { UsersService } from '../users/users.service';
 
 @Injectable()

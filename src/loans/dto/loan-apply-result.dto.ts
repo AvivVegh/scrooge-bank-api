@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsDate, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
-import { LoanStatus } from 'src/entities/loan.entity';
+import { LoanStatus } from '../../entities/loan.entity';
 
 export class ApplyLoanResultDto {
   @ApiProperty({

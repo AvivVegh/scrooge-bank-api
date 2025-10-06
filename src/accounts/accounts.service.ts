@@ -5,11 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { BankLedgerEntity, BankLedgerKind } from 'src/entities/bank-ledger.entity';
-import { LoanEntity, LoanStatus } from 'src/entities/loan.entity';
-import { TransactionEntity, TransactionType } from 'src/entities/transaction.entity';
 import { Between, DataSource, Repository } from 'typeorm';
 import { AccountEntity, AccountStatus } from '../entities/account.entity';
+import { BankLedgerEntity, BankLedgerKind } from '../entities/bank-ledger.entity';
+import { LoanEntity, LoanStatus } from '../entities/loan.entity';
+import { TransactionEntity, TransactionType } from '../entities/transaction.entity';
 import { convertToCents } from '../lib/utils';
 import { AccountStatementResultDto } from './dto/account-statement-result.dto';
 import { DepositResultDto } from './dto/deposit-result.dto';

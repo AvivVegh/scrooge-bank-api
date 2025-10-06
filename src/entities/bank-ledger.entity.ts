@@ -1,4 +1,3 @@
-// src/bank/bank-ledger.entity.ts (FKs nullable!)
 import {
   Column,
   CreateDateColumn,
