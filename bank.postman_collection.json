@@ -157,10 +157,22 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/account/{{accountId}}/statement",
+              "raw": "{{baseUrl}}/account/{{accountId}}/statement?fromDate={{fromDate}}&toDate={{toDate}}",
               "protocol": "http",
               "host": ["{{baseUrl}}"],
-              "path": ["account", "{{accountId}}", "statement"]
+              "path": ["account", "{{accountId}}", "statement"],
+              "query": [
+                {
+                  "key": "fromDate",
+                  "value": "{{fromDate}}",
+                  "type": "string"
+                },
+                {
+                  "key": "toDate",
+                  "value": "{{toDate}}",
+                  "type": "string"
+                }
+              ]
             }
           },
           "response": []

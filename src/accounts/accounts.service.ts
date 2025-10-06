@@ -8,7 +8,7 @@ import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { BankLedgerEntity, BankLedgerKind } from 'src/entities/bank-ledger.entity';
 import { LoanEntity, LoanStatus } from 'src/entities/loan.entity';
 import { TransactionEntity, TransactionType } from 'src/entities/transaction.entity';
-import { DataSource, Repository } from 'typeorm';
+import { Between, DataSource, Repository } from 'typeorm';
 import { AccountEntity, AccountStatus } from '../entities/account.entity';
 import { convertToCents } from '../lib/utils';
 import { AccountStatementResultDto } from './dto/account-statement-result.dto';
@@ -62,8 +62,12 @@ export class AccountsService {
 
   async getAccountStatement({
     accountId,
+    fromDate,
+    toDate,
   }: {
     accountId: string;
+    fromDate: Date;
+    toDate: Date;
   }): Promise<AccountStatementResultDto> {
     return this.dataSource.transaction(async transaction => {
       const account = await transaction.getRepository(AccountEntity).findOne({
@@ -79,7 +83,7 @@ export class AccountsService {
       });
 
       const transactions = await transaction.getRepository(TransactionEntity).find({
-        where: { account: { id: accountId } },
+        where: { account: { id: accountId }, createdAt: Between(fromDate, toDate) },
       });
 
       const balance = account.balanceCents / 100;

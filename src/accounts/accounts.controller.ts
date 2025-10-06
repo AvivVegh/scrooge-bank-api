@@ -1,10 +1,21 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards, ValidationPipe } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+  ValidationPipe,
+} from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { AccountsService } from './accounts.service';
 import { CloseAccountDto } from './dto/close-account.dto';
 import { CreateDepositDto } from './dto/create-deposit.dto';
 import { DepositResultDto } from './dto/deposit-result.dto';
+import { GetAccountStatementDto } from './dto/get-account-statement.dto';
 import { GetAccountDto } from './dto/get-account.dto';
 import { WithdrawDto } from './dto/withdraw.dto';
 
@@ -53,8 +64,15 @@ export class AccountsController {
   @ApiResponse({ status: 200, description: 'Account statement retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Account not found' })
-  async getAccountBalance(@Param(ValidationPipe) getAccountDto: GetAccountDto) {
-    return this.accountsService.getAccountStatement({ accountId: getAccountDto.accountId });
+  async getAccountBalance(
+    @Query(ValidationPipe) getAccountStatementDto: GetAccountStatementDto,
+    @Param(ValidationPipe) getAccountDto: GetAccountDto,
+  ) {
+    return this.accountsService.getAccountStatement({
+      accountId: getAccountDto.accountId,
+      fromDate: getAccountStatementDto.fromDate,
+      toDate: getAccountStatementDto.toDate,
+    });
   }
 
   @Post('close')
