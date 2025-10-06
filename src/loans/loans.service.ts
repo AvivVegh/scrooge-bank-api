@@ -94,32 +94,40 @@ export class LoansService {
 
       const baseCash = parseInt(row.base_cash);
       const depositsOnHand = parseInt(row.deposits_sum) + parseInt(row.withdrawals_sum); // withdrawals are negative
-      const loanableFromDeposits = depositsOnHand > 0 ? depositsOnHand / 4 : 0; // floor 25%
+      const loanableFromDeposits = depositsOnHand > 0 ? Math.floor(depositsOnHand / 4) : 0; // up to 25% of deposits
       const drawn = -parseInt(row.disbursed_sum); // disbursed_sum is negative in ledger
       const repaid = parseInt(row.payments_sum);
       const outstanding = drawn - repaid;
       const available = baseCash + loanableFromDeposits - outstanding;
+
+      console.log('Bank funds calculation:');
+      console.log('  baseCash:', baseCash);
+      console.log('  depositsOnHand:', depositsOnHand);
+      console.log('  loanableFromDeposits (25% of deposits):', loanableFromDeposits);
+      console.log('  outstanding loans:', outstanding);
+      console.log('  total available:', available);
+      console.log('  requested amount:', amount);
 
       // 5) Approve or reject
       if (amount <= available) {
         // Approve & disburse immediately (outside bank; no account credit here)
         const loan = await m.getRepository(LoanEntity).save({
           userId,
-          principal_cents: amountCents,
+          principalCents: amountCents,
           status: LoanStatus.APPROVED,
-          client_key: idemKey,
+          clientKey: idemKey,
           decisionAt: new Date(),
         });
 
         const disb = await m.getRepository(LoanDisbursementEntity).save({
           loan: { id: loan.id },
-          amount_cents: amountCents,
+          amountCents: amountCents,
         });
 
         await m.getRepository(BankLedgerEntity).save({
           kind: BankLedgerKind.LOAN_DISBURSED,
-          amount_cents: -amountCents,
-          loan_disbursement: { id: disb.id },
+          amountCents: -amountCents,
+          loanDisbursement: { id: disb.id },
         });
 
         return {
@@ -132,10 +140,10 @@ export class LoansService {
       } else {
         const loan = await m.getRepository(LoanEntity).save({
           userId,
-          principal_cents: amountCents,
+          principalCents: amountCents,
           status: LoanStatus.REJECTED,
           reason: 'insufficient_bank_funds',
-          client_key: idemKey,
+          clientKey: idemKey,
           decisionAt: new Date(),
         });
         return {

@@ -12,7 +12,7 @@ export class LoanEntity {
 
   @Column({ name: 'user_id' }) userId: string;
 
-  @Column({ name: 'principal_cents' }) principalCents: number;
+  @Column({ name: 'principal_cents', type: 'bigint' }) principalCents: number;
 
   @Column({ type: 'enum', enum: LoanStatus, default: LoanStatus.PENDING })
   status: LoanStatus;
