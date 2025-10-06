@@ -22,62 +22,48 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    container_name: scrooge-bank-api-redis
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: scrooge-bank-api-app
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "3001:3000"
+    environment:
+      NODE_ENV: development
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: scrooge_bank
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      BANK_BASE_CASH_AMOUNT: 250000
+      JWT_ACCESS_SECRET: supersecret
+      JWT_ACCESS_TOKEN_EXPIRATION_TIME: 15m
+      PORT: 3000
+
     volumes:
-      - redis_data_dev:/data
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+
     networks:
       - scrooge-bank-network-dev
+    command: >
+      sh -c "npm run migration:run && npm run seed:bank && npm run start"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # NestJS Application (Development)
-  # app:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   restart: unless-stopped
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     NODE_ENV: development
-  #     DATABASE_HOST: postgres
-  #     DATABASE_PORT: 5432
-  #     DATABASE_NAME: nestjs_template_dev
-  #     DATABASE_USER: postgres
-  #     DATABASE_PASSWORD: postgres
-  #     REDIS_HOST: redis
-  #     REDIS_PORT: 6379
-  #   volumes:
-  #     - .:/usr/src/app
-  #     - /usr/src/app/node_modules
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
-  #   networks:
-  #     - nestjs-network-dev
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 40s
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
   postgres_data_dev:
     driver: local
-  redis_data_dev:
-    driver: local
+
 
 networks:
   scrooge-bank-network-dev:

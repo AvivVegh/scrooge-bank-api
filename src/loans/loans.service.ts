@@ -101,7 +101,7 @@ export class LoansService {
       }
 
       // Compute availability from ledger (snapshot inside this tx)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const queryResult = await m.query(`
         SELECT
           COALESCE(SUM(CASE WHEN kind='base_cash'      THEN amount_cents END), 0) AS base_cash,
@@ -112,17 +112,22 @@ export class LoansService {
         FROM bank_ledger
       `);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const row = queryResult[0];
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-      const baseCash = parseInt(row.base_cash);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-      const depositsOnHand = parseInt(row.deposits_sum) + parseInt(row.withdrawals_sum); // withdrawals are negative
-      const loanableFromDeposits = depositsOnHand > 0 ? Math.floor(depositsOnHand / 4) : 0; // up to 25% of deposits
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-      const drawn = -parseInt(row.disbursed_sum); // disbursed_sum is negative in ledger
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-      const repaid = parseInt(row.payments_sum);
+
+      const baseCash = parseInt(row.base_cash, 10);
+
+      // withdrawals are negative
+
+      const depositsOnHand = parseInt(row.deposits_sum, 10) + parseInt(row.withdrawals_sum, 10);
+
+      // up to 25% of deposits
+      const loanableFromDeposits = depositsOnHand > 0 ? Math.floor(depositsOnHand / 4) : 0;
+
+      // disbursed_sum is negative in ledger
+
+      const drawn = -parseInt(row.disbursed_sum, 10);
+
+      const repaid = parseInt(row.payments_sum, 10);
       const outstanding = drawn - repaid;
       const available = baseCash + loanableFromDeposits - outstanding;
 

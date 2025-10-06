@@ -28,9 +28,20 @@ const baseCashAmount = process.env.BANK_BASE_CASH_AMOUNT;
 
 dataSource.initialize().then(async () => {
   const queryRunner = dataSource.createQueryRunner();
-  await queryRunner.query(
-    `INSERT INTO bank_ledger (kind, amount_cents, memo) VALUES ('base_cash', ${amountCents}, 'Initial capitalization (${baseCashAmount})')`,
+
+  // check if bank ledger base_cash row exists
+  const result = await queryRunner.query(
+    `SELECT COUNT(*) FROM bank_ledger WHERE kind = 'base_cash'`,
   );
+
+  if (result[0].count > 0) {
+    console.log('Bank ledger base_cash row already exists');
+  } else {
+    await queryRunner.query(
+      `INSERT INTO bank_ledger (kind, amount_cents, memo) VALUES ('base_cash', ${amountCents}, 'Initial capitalization (${baseCashAmount})')`,
+    );
+  }
+
   await queryRunner.release();
   await dataSource.destroy();
 });
