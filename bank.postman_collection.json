@@ -750,7 +750,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"amount\": {{loanAmount}}\n}",
+              "raw": "{\n    \"amount\": {{loanAmount}},\n    \"fromAccountId\": \"{{accountId}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -758,10 +758,10 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/v1/loan/{{loanId}}/payment",
+              "raw": "{{baseUrl}}/v1/loan/{{loanId}}/payment/{{paymentId}}",
               "protocol": "http",
               "host": ["{{baseUrl}}"],
-              "path": ["v1", "loan", "{{loanId}}", "payment"]
+              "path": ["v1", "loan", "{{loanId}}", "payment", "{{paymentId}}"]
             }
           },
           "response": []
