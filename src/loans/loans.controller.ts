@@ -9,7 +9,7 @@ import {
   UseGuards,
   ValidationPipe,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { ApplyLoanDto } from './dto/loan-apply.dto';
 import { LoanPaymentDto } from './dto/loan-payment.dto';
@@ -56,7 +56,13 @@ export class LoansController {
 
   @Post(':loanId/payment/:paymentId')
   @ApiOperation({ summary: 'Make a payment for a loan' })
-  @ApiResponse({ status: 200, description: 'Payment made successfully' })
+  @ApiParam({ name: 'loanId', description: 'The unique identifier of the loan', type: String })
+  @ApiParam({
+    name: 'paymentId',
+    description: 'Idempotency key for the payment transaction',
+    type: String,
+  })
+  @ApiResponse({ status: 200, description: 'Payment made  successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'User or loan not found' })
   async payment(
