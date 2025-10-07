@@ -1579,10 +1579,6 @@ npm run migration:revert
   - JWT bearer tokens for API authentication
   - Idempotency keys for critical operations
 
-## License
-
-UNLICENSED - Private use only
-
 ---
 
 **Happy Banking! 💰**
