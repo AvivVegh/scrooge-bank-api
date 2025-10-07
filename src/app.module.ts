@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountsModule } from './accounts/accounts.module';
+import { OperatorModule } from './admin/operator/operator.module';
 import { AuthModule } from './auth/auth.module';
 import { databaseConfig } from './config/database.config';
 import { LoansModule } from './loans/loans.module';
@@ -22,6 +23,7 @@ function envFiles(): string[] {
     AuthModule,
     AccountsModule,
     LoansModule,
+    OperatorModule,
   ],
   controllers: [],
   providers: [],

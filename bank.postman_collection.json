@@ -468,7 +468,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"roles\": [\"user\"]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -476,10 +476,10 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/auth/login",
+              "raw": "{{baseUrl}}/auth/register",
               "protocol": "http",
               "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "path": ["auth", "register"]
             }
           },
           "response": []

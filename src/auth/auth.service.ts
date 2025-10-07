@@ -27,14 +27,30 @@ export class AuthService {
     this.accessTokenExpirationTime = process.env.JWT_ACCESS_TOKEN_EXPIRATION_TIME;
   }
 
-  async register(email: string, password: string) {
+  async register({
+    email,
+    password,
+    roles,
+  }: {
+    email: string;
+    password: string;
+    roles?: UserRole[];
+  }) {
     this.logger.log(`Registration attempt for email: ${email}`);
+
+    if (!roles) {
+      roles = [UserRole.USER];
+    } else {
+      if (!roles.includes(UserRole.USER)) {
+        roles.push(UserRole.USER);
+      }
+    }
 
     const password_hash = await argon2.hash(password);
     const user = await this.usersService.create({
       email,
       password_hash,
-      roles: [UserRole.USER],
+      roles,
     });
 
     this.logger.log(`User created successfully: ${user.id} with email: ${email}`);

@@ -22,5 +22,6 @@ import { LoansService } from './loans.service';
   ],
   controllers: [LoansController],
   providers: [LoansService],
+  exports: [LoansService],
 })
 export class LoansModule {}

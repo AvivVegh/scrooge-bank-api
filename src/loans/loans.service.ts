@@ -101,44 +101,18 @@ export class LoansService {
       }
 
       // Compute availability from ledger (snapshot inside this tx)
-
-      const queryResult = await m.query(`
-        SELECT
-          COALESCE(SUM(CASE WHEN kind='base_cash'      THEN amount_cents END), 0) AS base_cash,
-          COALESCE(SUM(CASE WHEN kind='deposit'        THEN amount_cents END), 0) AS deposits_sum,
-          COALESCE(SUM(CASE WHEN kind='withdrawal'     THEN amount_cents END), 0) AS withdrawals_sum,
-          COALESCE(SUM(CASE WHEN kind='loan_disbursed' THEN amount_cents END), 0) AS disbursed_sum,
-          COALESCE(SUM(CASE WHEN kind='loan_payment'   THEN amount_cents END), 0) AS payments_sum
-        FROM bank_ledger
-      `);
-
-      const row = queryResult[0];
-
-      const baseCash = parseInt(row.base_cash, 10);
-
-      // withdrawals are negative
-
-      const depositsOnHand = parseInt(row.deposits_sum, 10) + parseInt(row.withdrawals_sum, 10);
-
-      // up to 25% of deposits
-      const loanableFromDeposits = depositsOnHand > 0 ? Math.floor(depositsOnHand / 4) : 0;
-
-      // disbursed_sum is negative in ledger
-
-      const drawn = -parseInt(row.disbursed_sum, 10);
-
-      const repaid = parseInt(row.payments_sum, 10);
-      const outstanding = drawn - repaid;
-      const available = baseCash + loanableFromDeposits - outstanding;
+      const { baseCash, depositsOnHand, loanableFromDeposits, availableForLoans } =
+        await this.getBankFunds(m);
 
       this.logger.debug(
         `Bank funds calculation: baseCash=${baseCash}, depositsOnHand=${depositsOnHand}, ` +
-          `loanableFromDeposits=${loanableFromDeposits}, outstanding=${outstanding}, ` +
-          `available=${available}, requested=${amount}`,
+          `loanableFromDeposits=${loanableFromDeposits}, availableForLoans=${availableForLoans}, requested=${amountCents}`,
       );
 
-      if (amount <= available) {
-        this.logger.log(`Loan APPROVED: user=${userId}, amount=${amount}, available=${available}`);
+      if (amountCents <= availableForLoans) {
+        this.logger.log(
+          `Loan APPROVED: user=${userId}, amount=${amountCents}, available=${availableForLoans}`,
+        );
         const loan = await m.getRepository(LoanEntity).save({
           userId,
           principalCents: amountCents,
@@ -169,7 +143,7 @@ export class LoansService {
         } as ApplyLoanResultDto;
       } else {
         this.logger.warn(
-          `Loan REJECTED: user=${userId}, amount=${amount}, available=${available}, reason=insufficient_bank_funds`,
+          `Loan REJECTED: user=${userId}, amount=${amountCents}, available=${availableForLoans}, reason=insufficient_bank_funds`,
         );
         const loan = await m.getRepository(LoanEntity).save({
           userId,
@@ -350,5 +324,48 @@ export class LoansService {
     const due = drawn > paid ? drawn - paid : 0;
 
     return { drawn, repaid: paid, due };
+  }
+
+  async getBankFunds(m: EntityManager): Promise<{
+    baseCash: number;
+    depositsOnHand: number;
+    loanableFromDeposits: number;
+    outstandingLoans: number;
+    availableForLoans: number;
+  }> {
+    const queryResult = await m.query(`
+      SELECT
+        COALESCE(SUM(CASE WHEN kind='base_cash'      THEN amount_cents END), 0) AS base_cash,
+        COALESCE(SUM(CASE WHEN kind='deposit'        THEN amount_cents END), 0) AS deposits_sum,
+        COALESCE(SUM(CASE WHEN kind='withdrawal'     THEN amount_cents END), 0) AS withdrawals_sum,
+        COALESCE(SUM(CASE WHEN kind='loan_disbursed' THEN amount_cents END), 0) AS disbursed_sum,
+        COALESCE(SUM(CASE WHEN kind='loan_payment'   THEN amount_cents END), 0) AS payments_sum
+      FROM bank_ledger
+    `);
+
+    const row = queryResult[0];
+
+    const baseCash = parseInt(row.base_cash, 10);
+
+    // withdrawals are negative
+    const depositsOnHand = parseInt(row.deposits_sum, 10) + parseInt(row.withdrawals_sum, 10);
+
+    // up to 25% of deposits
+    const loanableFromDeposits = depositsOnHand > 0 ? Math.floor(depositsOnHand / 4) : 0;
+
+    // disbursed_sum is negative in ledger
+    const drawn = -parseInt(row.disbursed_sum, 10);
+
+    const repaid = parseInt(row.payments_sum, 10);
+    const outstanding = drawn - repaid;
+    const available = baseCash + loanableFromDeposits - outstanding;
+
+    return {
+      baseCash,
+      depositsOnHand,
+      loanableFromDeposits,
+      outstandingLoans: outstanding,
+      availableForLoans: available,
+    };
   }
 }

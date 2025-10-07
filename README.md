@@ -5,6 +5,7 @@ A comprehensive banking API built with NestJS and TypeScript that provides user 
 ## Table of Contents
 
 - [Overview](#overview)
+- [User Stories](#user-stories)
 - [Features](#features)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
@@ -17,10 +18,69 @@ A comprehensive banking API built with NestJS and TypeScript that provides user 
   - [Loans](#loans)
 - [API Flow Guide](#api-flow-guide)
 - [Swagger Documentation](#swagger-documentation)
+- [Postman Collection](#postman-collection)
 
 ## Overview
 
 Scrooge Bank API is a RESTful banking service that simulates real-world banking operations including user registration, account creation, deposits, withdrawals, loan applications, and loan payments. The API is built with security and reliability in mind, featuring JWT authentication, idempotency keys, and comprehensive transaction management.
+
+Scrooge Bank has opened for business! We are targeting customers who are technically savvy and have decided they love doing banking all via API Requests.
+
+We are starting off with only two types of accounts - Checking Accounts and Personal Loans. We want our customers to be able to withdraw and deposit money into their checking accounts, and for loan customers to apply for loans that distribute outside the bank.
+
+We are pretty generous, so any loan our bank can cover, we will approve at a 0% interest. So much for our scrooge reputation!
+
+Our bank is starting off with $250,000 USD to cover loans, and we are also allowed to use up to 25% of the customers' money on hand.
+
+## User Stories
+
+### 1. General
+
+- As the bank operator, I should be able to see how much money total we currently have on hand.
+- As the bank operator, user withdrawals are allowed to put the bank into debt, but loans are not.
+
+### 2. Accounts
+
+- As a user, I should be able to open an Account
+- As a user, I should be able to close an Account
+- As a user, I should not be allowed to have more than 1 open account
+
+### 3. Deposits
+
+- As a user, I should be able to make a deposit to my account
+- As a user, If I do not have an account when I deposit, I should see an error
+- As a user, I should not be able to make deposits to other people's accounts
+
+### 4. Withdrawals
+
+- As a user, I should be able to make a withdrawal from my account
+- As a user, is I do not have enough funds, I should see an error
+- As a user, I should not be able to make withdrawals from other people's accounts
+
+### 5. Loans
+
+- As a user, I should be able to apply for a loan
+- As a user, my loan should be accepted if the bank has enough money to cover it
+- As a user, when I apply for a loan, it should be rejected if the bank doesn't have enough money to cover it.
+- As a user, I can make a payment on my loan
+
+### 6. Authentication - Self-Directed User Story
+
+#### User Story: Access & Role Discovery
+
+As an authenticated user, I need to:
+
+- obtain an access token to call protected APIs, and
+- discover my effective roles/permissions, so that my UI and actions are tailored to what I'm allowed to do.
+
+#### Why did I pick this story?
+
+- Auth is the "first mile" dependency for everything else. Without a reliable way to get a token and know what I can do, every other feature is blocked or implemented inconsistently across services. This story unblocks developers, enables role-gated UX, and creates a single source of truth for authorization.
+
+#### What user value does it deliver?
+
+- Clarity & speed: Users immediately see what they can do; no trial-and-error errors.
+- Security: Principle of least privilege via roles/permissions, audit-friendly.
 
 ## Features
 
@@ -75,29 +135,121 @@ NODE_ENV=development
 
 ### Running the Application
 
+The easiest way to run the Scrooge Bank API is using Docker Compose, which will set up both the application and PostgreSQL database in containers.
+
+#### Prerequisites for Docker
+
+- Docker Engine (v20.10 or higher)
+- Docker Compose (v2.0 or higher)
+
+#### Quick Start with Docker
+
 ```bash
-# Run database migrations
-npm run migration:run
+# Clone the repository
+git clone <repository-url>
+cd scrooge-bank-api
 
-# Seed the database (optional)
-npm run seed:bank
-
-# Start in development mode
-npm run start:dev
-
-# Start in production mode
-npm run build
-npm run start:prod
+# Start all services (database + API)
+docker-compose up
 ```
 
-The API will be available at `http://localhost:3000`
+The application will automatically:
 
-## API Documentation
+1. ✅ Pull and start PostgreSQL database
+2. ✅ Build the NestJS application
+3. ✅ Run database migrations
+4. ✅ Seed the database with initial data
+5. ✅ Start the API server
 
-### Base URL
+**Access the API:**
+
+- **API:** `http://localhost:3001`
+- **Swagger Documentation:** `http://localhost:3001/api`
+- **Database:** `localhost:5432`
+
+#### Docker Commands
+
+```bash
+# Start services in detached mode (background)
+docker-compose up -d --build
+
+# View logs
+docker-compose logs -f
+
+# View logs for specific service
+docker-compose logs -f app
+docker-compose logs -f postgres
+
+# Stop all services
+docker-compose down
+
+# Stop and remove volumes (clears database)
+docker-compose down -v
+```
+
+#### Docker Configuration
+
+The `docker-compose.yml` file defines two services:
+
+**PostgreSQL Database:**
+
+- Image: `postgres:15-alpine`
+- Port: `5432` (mapped to host)
+- Database: `scrooge_bank`
+- Username: `postgres`
+- Password: `postgres`
+- Volume: `postgres_data_dev` (persists data)
+
+**NestJS Application:**
+
+- Port: `3000` (container) → `3001` (host)
+- Auto-runs migrations and seeding
+- Hot-reload enabled with volume mounting
+- Health check endpoint configured
+
+#### Environment Variables (Docker)
+
+The docker-compose file sets these environment variables automatically:
+
+```yaml
+NODE_ENV: development
+DATABASE_HOST: postgres
+DATABASE_PORT: 5432
+DATABASE_NAME: scrooge_bank
+DATABASE_USER: postgres
+DATABASE_PASSWORD: postgres
+BANK_BASE_CASH_AMOUNT: 250000
+JWT_ACCESS_SECRET: supersecret
+JWT_ACCESS_TOKEN_EXPIRATION_TIME: 15m
+PORT: 3000
+```
+
+⚠️ **Note:** These are development defaults. For production, use a `.env` file or update the docker-compose configuration with secure values.
+
+#### Customizing Docker Setup
+
+To customize the configuration, you can:
+
+1. **Override environment variables:**
+
+   ```bash
+   # Create a .env file in the project root
+   cp env.example .env
+   # Edit .env with your values
+   ```
+
+2. **Change the exposed port:**
+   Edit `docker-compose.yml` and modify:
+
+   ```yaml
+   ports:
+     - 'YOUR_PORT:3000'
+   ```
+
+**Base url:**
 
 ```
-http://localhost:3000
+http://localhost:3001
 ```
 
 ### Authentication
@@ -616,11 +768,13 @@ Authorization: Bearer <your_access_token>
 
 Here's a step-by-step guide to using the Scrooge Bank API:
 
+> **Note:** The examples below use `http://localhost:3001`.
+
 ### Step 1: Register and Authenticate
 
 ```bash
 # Register a new user
-curl -X POST http://localhost:3000/auth/register \
+curl -X POST http://localhost:3001/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "john@example.com",
@@ -636,7 +790,7 @@ curl -X POST http://localhost:3000/auth/register \
 
 ```bash
 # Create an account
-curl -X POST http://localhost:3000/account/create \
+curl -X POST http://localhost:3001/account/create \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
@@ -649,7 +803,7 @@ curl -X POST http://localhost:3000/account/create \
 
 ```bash
 # Deposit money into your account
-curl -X POST http://localhost:3000/account/deposit \
+curl -X POST http://localhost:3001/account/deposit \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -d '{
@@ -665,7 +819,7 @@ curl -X POST http://localhost:3000/account/deposit \
 
 ```bash
 # Apply for a loan
-curl -X POST http://localhost:3000/loan/apply \
+curl -X POST http://localhost:3001/loan/apply \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -d '{
@@ -682,7 +836,7 @@ curl -X POST http://localhost:3000/loan/apply \
 
 ```bash
 # Make a payment towards your loan
-curl -X POST http://localhost:3000/loan/YOUR_LOAN_ID/payment/payment-001 \
+curl -X POST http://localhost:3001/loan/YOUR_LOAN_ID/payment/payment-001 \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -d '{
@@ -697,7 +851,7 @@ curl -X POST http://localhost:3000/loan/YOUR_LOAN_ID/payment/payment-001 \
 
 ```bash
 # Get account information
-curl -X GET http://localhost:3000/account/YOUR_ACCOUNT_ID \
+curl -X GET http://localhost:3001/account/YOUR_ACCOUNT_ID \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
@@ -707,7 +861,7 @@ curl -X GET http://localhost:3000/account/YOUR_ACCOUNT_ID \
 
 ```bash
 # Get account statement for a date range
-curl -X GET "http://localhost:3000/account/YOUR_ACCOUNT_ID/statement?fromDate=2025-10-01&toDate=2025-10-31" \
+curl -X GET "http://localhost:3001/account/YOUR_ACCOUNT_ID/statement?fromDate=2025-10-01&toDate=2025-10-31" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
@@ -715,13 +869,236 @@ curl -X GET "http://localhost:3000/account/YOUR_ACCOUNT_ID/statement?fromDate=20
 
 ## Swagger Documentation
 
-Interactive API documentation is available via Swagger UI:
+Interactive API documentation is available via Swagger UI - a powerful interface to explore and test all API endpoints directly from your browser.
+
+### 🌐 Access Swagger UI
+
+**Local Installation:**
 
 ```
 http://localhost:3000/api
 ```
 
-Visit this URL in your browser to explore all endpoints, test requests, and view detailed schema definitions.
+**Docker Installation:**
+
+```
+http://localhost:3001/api
+```
+
+### ✨ Features
+
+The Swagger UI provides:
+
+- 📖 **Interactive Documentation**: Browse all endpoints with detailed descriptions
+- 🧪 **Live API Testing**: Execute requests directly from the browser
+- 📋 **Request/Response Examples**: See sample payloads and responses
+- 🔐 **Authentication Support**: Built-in JWT token authorization
+- 📊 **Schema Definitions**: Detailed DTO and entity structures
+- ✅ **Validation Rules**: See all required fields and constraints
+
+### 🚀 Quick Start with Swagger
+
+#### Step 1: Authenticate
+
+1. Navigate to the **Authentication** section
+2. Expand `POST /auth/register` or `POST /auth/login`
+3. Click **"Try it out"**
+4. Enter your credentials:
+   ```json
+   {
+     "email": "user@example.com",
+     "password": "password123"
+   }
+   ```
+5. Click **"Execute"**
+6. Copy the `accessToken` from the response
+
+#### Step 2: Authorize
+
+1. Click the **"Authorize"** button (🔒 icon) at the top right
+2. In the "Value" field, enter: `Bearer YOUR_ACCESS_TOKEN`
+3. Click **"Authorize"**
+4. Click **"Close"**
+
+✅ Now all protected endpoints will use your access token automatically!
+
+#### Step 3: Test Endpoints
+
+**Create an Account:**
+
+1. Go to **Account Management** section
+2. Expand `POST /account/create`
+3. Click **"Try it out"** → **"Execute"**
+4. Copy the `id` from the response
+
+**Make a Deposit:**
+
+1. Expand `POST /account/deposit`
+2. Click **"Try it out"**
+3. Enter the request body:
+   ```json
+   {
+     "accountId": "your-account-id-here",
+     "amount": 1000,
+     "idempotencyKey": "deposit-001"
+   }
+   ```
+4. Click **"Execute"**
+
+**Apply for a Loan:**
+
+1. Go to **Loans** section
+2. Expand `POST /loan/apply`
+3. Click **"Try it out"**
+4. Enter the request body:
+   ```json
+   {
+     "amount": 5000,
+     "idempotencyKey": "loan-app-001"
+   }
+   ```
+5. Click **"Execute"**
+
+### 📚 Available Endpoint Groups
+
+The Swagger UI organizes endpoints into the following categories:
+
+**🔐 Authentication**
+
+- `POST /auth/register` - Register a new user
+- `POST /auth/login` - Login existing user
+- `POST /auth/refresh` - Refresh access token
+
+**💰 Account Management**
+
+- `POST /account/create` - Create a new account
+- `GET /account` - Get all user accounts
+- `GET /account/:accountId` - Get specific account
+- `POST /account/deposit` - Deposit funds
+- `POST /account/withdraw` - Withdraw funds
+- `GET /account/:accountId/statement` - Get account statement
+- `POST /account/close` - Close an account
+
+**🏦 Loans**
+
+- `POST /loan/apply` - Apply for a loan
+- `GET /loan` - Get all user loans
+- `POST /loan/:loanId/payment/:paymentId` - Make loan payment
+
+**⚙️ Admin/Operator** (requires API key)
+
+- `GET /admin/operator/balance` - Get bank balance
+- `GET /admin/operator/loan-funds` - Get available loan funds
+- `GET /admin/operator/can-approve-loan` - Check loan approval eligibility
+
+### 💡 Tips for Using Swagger
+
+- **Response Codes**: Each endpoint shows all possible HTTP status codes (200, 400, 401, 404, etc.)
+- **Schema Validation**: Click on schema examples to see all field types and validation rules
+- **Idempotency Keys**: Use unique keys for deposits, withdrawals, and loan applications to prevent duplicates
+- **Token Expiration**: If you get a 401 error, your token may have expired - use `/auth/refresh` to get a new one
+- **Try Different Scenarios**: Test error cases by providing invalid data or insufficient funds
+
+## Postman Collection
+
+A comprehensive Postman collection is included in the repository for easy API testing and development.
+
+### 📦 Import the Collection
+
+**File Location:** `bank.postman_collection.json`
+
+**Import Steps:**
+
+1. Open Postman
+2. Click **Import** button
+3. Select the `bank.postman_collection.json` file from the project root
+4. The collection will be imported with all endpoints pre-configured
+
+### ✨ Features
+
+The Postman collection includes:
+
+- **Auto-Variable Management**: Variables are automatically set from API responses
+- **Pre-configured Endpoints**: All API endpoints with proper request/response examples
+- **Environment Ready**: Works with both local and Docker setups
+- **Token Management**: Automatic JWT token handling and refresh
+
+### 🔧 Collection Variables
+
+The collection uses the following variables (auto-managed):
+
+| Variable       | Description        | Auto-Set                         |
+| -------------- | ------------------ | -------------------------------- |
+| `baseUrl`      | API base URL       | ❌ (default: `localhost:3001`)   |
+| `accessToken`  | JWT access token   | ✅ (from login/register)         |
+| `refreshToken` | JWT refresh token  | ✅ (from login/register)         |
+| `userId`       | User ID            | ✅ (extracted from JWT)          |
+| `accountId`    | Account ID         | ✅ (from create account)         |
+| `loanId`       | Loan ID            | ✅ (from loan apply)             |
+| `email`        | User email         | ❌ (default: `user@example.com`) |
+| `password`     | User password      | ❌ (default: `password123`)      |
+| `amount`       | Transaction amount | ❌ (default: `1000`)             |
+| `loanAmount`   | Loan amount        | ❌ (default: `100`)              |
+
+### 🚀 Quick Start with Postman
+
+1. **Import the collection** (see steps above)
+
+2. **Set your base URL** (if different from default):
+   - Click on the collection
+   - Go to **Variables** tab
+   - Update `baseUrl` to your API server (e.g., `http://localhost:3001`)
+
+3. **Customize credentials** (optional):
+   - Update `email` and `password` variables
+   - Or use the default: `user@example.com` / `password123`
+
+4. **Run the workflow**:
+   - **Step 1**: Run `POST /auth/register` or `POST /auth/login`
+     - ✅ Automatically sets `accessToken`, `refreshToken`, and `userId`
+   - **Step 2**: Run `POST /account/create`
+     - ✅ Automatically sets `accountId`
+   - **Step 3**: Run `POST /account/deposit`
+     - Uses the auto-set `accountId`
+   - **Step 4**: Run `POST /loan/apply`
+     - ✅ Automatically sets `loanId`
+   - **Step 5**: Run `POST /loan/:loanId/payment/:paymentId`
+     - Uses the auto-set `loanId` and `accountId`
+
+5. **Token expired?**
+   - Run `POST /auth/refresh` to get a new access token
+   - ✅ Automatically updates `accessToken` and `refreshToken`
+
+### 📋 Available Endpoints in Collection
+
+**Authentication:**
+
+- `POST /auth/register` - Register new user
+- `POST /auth/login` - Login user
+- `POST /auth/refresh` - Refresh access token
+
+**Account Management:**
+
+- `POST /account/create` - Create new account
+- `GET /account` - Get all accounts
+- `GET /account/:accountId` - Get specific account
+- `POST /account/deposit` - Deposit funds
+- `POST /account/withdraw` - Withdraw funds
+- `GET /account/:accountId/statement` - Get account statement
+- `POST /account/close` - Close account
+
+**Loans:**
+
+- `POST /loan/apply` - Apply for a loan
+- `GET /loan` - Get all loans
+- `POST /loan/:loanId/payment/:paymentId` - Make loan payment
+
+### 💡 Tips
+
+- **All authenticated requests** automatically include the `Authorization: Bearer {{accessToken}}` header
+- **No manual token copying** needed - everything is automated
+- **Update baseUrl** once and all requests use it
+- **Chain requests** by running them in sequence - variables flow automatically
 
 ## Development
 

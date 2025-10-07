@@ -53,10 +53,11 @@ export class AuthController {
   async register(@Body(ValidationPipe) createUserDto: CreateUserDto, @Res() res: Response) {
     this.logger.log(`POST /auth/register - Email: ${createUserDto.email}`);
 
-    const { accessToken, refreshToken } = await this.authService.register(
-      createUserDto.email,
-      createUserDto.password,
-    );
+    const { accessToken, refreshToken } = await this.authService.register({
+      email: createUserDto.email,
+      password: createUserDto.password,
+      roles: createUserDto.roles,
+    });
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
