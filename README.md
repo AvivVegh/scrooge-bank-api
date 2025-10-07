@@ -152,7 +152,7 @@ git clone <repository-url>
 cd scrooge-bank-api
 
 # Start all services (database + API)
-docker-compose up
+docker compose up -d --build
 ```
 
 The application will automatically:
@@ -173,20 +173,20 @@ The application will automatically:
 
 ```bash
 # Start services in detached mode (background)
-docker-compose up -d --build
+docker compose up -d --build
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # View logs for specific service
-docker-compose logs -f app
-docker-compose logs -f postgres
+docker compose logs -f app
+docker compose logs -f postgres
 
 # Stop all services
-docker-compose down
+docker compose down
 
 # Stop and remove volumes (clears database)
-docker-compose down -v
+docker compose down -v
 ```
 
 #### Docker Configuration
