@@ -97,7 +97,7 @@ As an authenticated user, I need to:
 
 ### Prerequisites
 
-- Node.js (v18 or higher)
+- Node.js (v22 or higher)
 - PostgreSQL database
 - npm or yarn package manager
 
@@ -254,11 +254,11 @@ http://localhost:3001
 
 ### Authentication
 
-All authentication endpoints are prefixed with `/auth`.
+All authentication endpoints are prefixed with `/v1/auth`.
 
 #### 1. Register a New User
 
-**Endpoint:** `POST /auth/register`
+**Endpoint:** `POST /v1/auth/register`
 
 **Description:** Create a new user account and receive an access token.
 
@@ -291,7 +291,7 @@ All authentication endpoints are prefixed with `/auth`.
 
 #### 2. Login
 
-**Endpoint:** `POST /auth/login`
+**Endpoint:** `POST /v1/auth/login`
 
 **Description:** Authenticate an existing user and receive an access token.
 
@@ -324,7 +324,7 @@ All authentication endpoints are prefixed with `/auth`.
 
 #### 3. Refresh Access Token
 
-**Endpoint:** `POST /auth/refresh`
+**Endpoint:** `POST /v1/auth/refresh`
 
 **Description:** Get a new access token using the refresh token stored in cookies.
 
@@ -356,11 +356,11 @@ All authentication endpoints are prefixed with `/auth`.
 
 ### Account Management
 
-All account endpoints are prefixed with `/account` and require JWT authentication via `Authorization: Bearer <token>` header.
+All account endpoints are prefixed with `/v1/account` and require JWT authentication via `Authorization: Bearer <token>` header.
 
 #### 1. Create Account
 
-**Endpoint:** `POST /account/create`
+**Endpoint:** `POST /v1/account/create`
 
 **Description:** Create a new bank account for the authenticated user.
 
@@ -395,7 +395,7 @@ Authorization: Bearer <your_access_token>
 
 #### 2. Get Account Information
 
-**Endpoint:** `GET /account/:accountId`
+**Endpoint:** `GET /v1/account/:accountId`
 
 **Description:** Retrieve information about a specific account.
 
@@ -428,7 +428,7 @@ Authorization: Bearer <your_access_token>
 
 #### 3. Get All Accounts
 
-**Endpoint:** `GET /account`
+**Endpoint:** `GET /v1/account`
 
 **Description:** Retrieve all accounts for the authenticated user.
 
@@ -462,7 +462,7 @@ Authorization: Bearer <your_access_token>
 
 #### 4. Deposit Funds
 
-**Endpoint:** `POST /account/deposit`
+**Endpoint:** `POST /v1/account/deposit`
 
 **Description:** Deposit funds into an account.
 
@@ -506,7 +506,7 @@ Authorization: Bearer <your_access_token>
 
 #### 5. Withdraw Funds
 
-**Endpoint:** `POST /account/withdraw`
+**Endpoint:** `POST /v1/account/withdraw`
 
 **Description:** Withdraw funds from an account.
 
@@ -549,7 +549,7 @@ Authorization: Bearer <your_access_token>
 
 #### 6. Get Account Statement
 
-**Endpoint:** `GET /account/:accountId/statement?fromDate=YYYY-MM-DD&toDate=YYYY-MM-DD`
+**Endpoint:** `GET /v1/account/:accountId/statement?fromDate=YYYY-MM-DD&toDate=YYYY-MM-DD`
 
 **Description:** Retrieve account statement for a specific date range.
 
@@ -596,7 +596,7 @@ Authorization: Bearer <your_access_token>
 
 #### 7. Close Account
 
-**Endpoint:** `POST /account/close`
+**Endpoint:** `POST /v1/account/close`
 
 **Description:** Close an existing account.
 
@@ -634,11 +634,11 @@ Authorization: Bearer <your_access_token>
 
 ### Loans
 
-All loan endpoints are prefixed with `/loan` and require JWT authentication.
+All loan endpoints are prefixed with `/v1/loan` and require JWT authentication.
 
 #### 1. Apply for a Loan
 
-**Endpoint:** `POST /loan/apply`
+**Endpoint:** `POST /v1/loan/apply`
 
 **Description:** Apply for a new loan.
 
@@ -684,7 +684,7 @@ Authorization: Bearer <your_access_token>
 
 #### 2. Get All Loans
 
-**Endpoint:** `GET /loan`
+**Endpoint:** `GET /v1/loan`
 
 **Description:** Retrieve all loans for the authenticated user.
 
@@ -719,7 +719,7 @@ Authorization: Bearer <your_access_token>
 
 #### 3. Make a Loan Payment
 
-**Endpoint:** `POST /loan/:loanId/payment/:paymentId`
+**Endpoint:** `POST /v1/loan/:loanId/payment/:paymentId`
 
 **Description:** Make a payment towards an existing loan.
 
@@ -764,6 +764,111 @@ Authorization: Bearer <your_access_token>
 
 ---
 
+### Operator/Admin
+
+All operator endpoints are prefixed with `/v1/admin/operator` and require JWT authentication with ADMIN role.
+
+#### 1. Get Bank Balance
+
+**Endpoint:** `GET /v1/admin/operator/balance`
+
+**Description:** Get total bank cash on hand (can be negative due to withdrawals).
+
+**Headers:**
+
+```
+Authorization: Bearer <your_access_token>
+```
+
+**Response:**
+
+```json
+{
+  "balanceCents": 1000000,
+  "balance": 10000.0
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Balance retrieved successfully
+- `401 Unauthorized` - Missing or invalid token
+- `403 Forbidden` - Admin role required
+
+---
+
+#### 2. Get Loan Funds Breakdown
+
+**Endpoint:** `GET /v1/admin/operator/loan-funds`
+
+**Description:** Get detailed breakdown of available funds for loan disbursement.
+
+**Headers:**
+
+```
+Authorization: Bearer <your_access_token>
+```
+
+**Response:**
+
+```json
+{
+  "balanceCents": 950000,
+  "balance": 9500.0,
+  "baseCashCents": 1000000,
+  "depositsOnHandCents": 500000,
+  "loanableFromDepositsCents": 125000,
+  "outstandingLoansCents": 175000,
+  "availableForLoansCents": 950000,
+  "availableForLoans": 9500.0
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Loan funds retrieved successfully
+- `401 Unauthorized` - Missing or invalid token
+- `403 Forbidden` - Admin role required
+
+**Note:** Withdrawals can put the bank into debt, but loans cannot.
+
+---
+
+#### 3. Check Loan Approval
+
+**Endpoint:** `GET /v1/admin/operator/can-approve-loan?amountCents=50000`
+
+**Description:** Check if a loan amount can be approved based on available funds.
+
+**Headers:**
+
+```
+Authorization: Bearer <your_access_token>
+```
+
+**Query Parameters:**
+
+- `amountCents` - Loan amount in cents (required)
+
+**Response:**
+
+```json
+{
+  "canApprove": true,
+  "availableForLoansCents": 950000,
+  "requestedCents": 50000,
+  "shortfallCents": 0
+}
+```
+
+**Status Codes:**
+
+- `200 OK` - Loan approval check completed
+- `401 Unauthorized` - Missing or invalid token
+- `403 Forbidden` - Admin role required
+
+---
+
 ## API Flow Guide
 
 Here's a step-by-step guide to using the Scrooge Bank API:
@@ -774,7 +879,7 @@ Here's a step-by-step guide to using the Scrooge Bank API:
 
 ```bash
 # Register a new user
-curl -X POST http://localhost:3001/auth/register \
+curl -X POST http://localhost:3001/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "john@example.com",
@@ -790,7 +895,7 @@ curl -X POST http://localhost:3001/auth/register \
 
 ```bash
 # Create an account
-curl -X POST http://localhost:3001/account/create \
+curl -X POST http://localhost:3001/v1/account/create \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
@@ -803,7 +908,7 @@ curl -X POST http://localhost:3001/account/create \
 
 ```bash
 # Deposit money into your account
-curl -X POST http://localhost:3001/account/deposit \
+curl -X POST http://localhost:3001/v1/account/deposit \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -d '{
@@ -819,7 +924,7 @@ curl -X POST http://localhost:3001/account/deposit \
 
 ```bash
 # Apply for a loan
-curl -X POST http://localhost:3001/loan/apply \
+curl -X POST http://localhost:3001/v1/loan/apply \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -d '{
@@ -836,7 +941,7 @@ curl -X POST http://localhost:3001/loan/apply \
 
 ```bash
 # Make a payment towards your loan
-curl -X POST http://localhost:3001/loan/YOUR_LOAN_ID/payment/payment-001 \
+curl -X POST http://localhost:3001/v1/loan/YOUR_LOAN_ID/payment/payment-001 \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -d '{
@@ -851,7 +956,7 @@ curl -X POST http://localhost:3001/loan/YOUR_LOAN_ID/payment/payment-001 \
 
 ```bash
 # Get account information
-curl -X GET http://localhost:3001/account/YOUR_ACCOUNT_ID \
+curl -X GET http://localhost:3001/v1/account/YOUR_ACCOUNT_ID \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
@@ -861,8 +966,41 @@ curl -X GET http://localhost:3001/account/YOUR_ACCOUNT_ID \
 
 ```bash
 # Get account statement for a date range
-curl -X GET "http://localhost:3001/account/YOUR_ACCOUNT_ID/statement?fromDate=2025-10-01&toDate=2025-10-31" \
+curl -X GET "http://localhost:3001/v1/account/YOUR_ACCOUNT_ID/statement?fromDate=2025-10-01&toDate=2025-10-31" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+---
+
+### Operator/Admin Endpoints (Optional)
+
+To access operator endpoints, you need to register a user with the `admin` role:
+
+```bash
+# Register an admin user
+curl -X POST http://localhost:3001/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "admin123",
+    "roles": ["admin"]
+  }'
+```
+
+**Then use the admin access token to call operator endpoints:**
+
+```bash
+# Get bank balance
+curl -X GET http://localhost:3001/v1/admin/operator/balance \
+  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
+
+# Get loan funds breakdown
+curl -X GET http://localhost:3001/v1/admin/operator/loan-funds \
+  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
+
+# Check if loan can be approved
+curl -X GET "http://localhost:3001/v1/admin/operator/can-approve-loan?amountCents=50000" \
+  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
 ```
 
 ---
@@ -901,7 +1039,7 @@ The Swagger UI provides:
 #### Step 1: Authenticate
 
 1. Navigate to the **Authentication** section
-2. Expand `POST /auth/register` or `POST /auth/login`
+2. Expand `POST /v1/auth/register` or `POST /v1/auth/login`
 3. Click **"Try it out"**
 4. Enter your credentials:
    ```json
@@ -927,13 +1065,13 @@ The Swagger UI provides:
 **Create an Account:**
 
 1. Go to **Account Management** section
-2. Expand `POST /account/create`
+2. Expand `POST /v1/account/create`
 3. Click **"Try it out"** → **"Execute"**
 4. Copy the `id` from the response
 
 **Make a Deposit:**
 
-1. Expand `POST /account/deposit`
+1. Expand `POST /v1/account/deposit`
 2. Click **"Try it out"**
 3. Enter the request body:
    ```json
@@ -948,7 +1086,7 @@ The Swagger UI provides:
 **Apply for a Loan:**
 
 1. Go to **Loans** section
-2. Expand `POST /loan/apply`
+2. Expand `POST /v1/loan/apply`
 3. Click **"Try it out"**
 4. Enter the request body:
    ```json
@@ -965,38 +1103,38 @@ The Swagger UI organizes endpoints into the following categories:
 
 **🔐 Authentication**
 
-- `POST /auth/register` - Register a new user
-- `POST /auth/login` - Login existing user
-- `POST /auth/refresh` - Refresh access token
+- `POST /v1/auth/register` - Register a new user
+- `POST /v1/auth/login` - Login existing user
+- `POST /v1/auth/refresh` - Refresh access token
 
 **💰 Account Management**
 
-- `POST /account/create` - Create a new account
-- `GET /account` - Get all user accounts
-- `GET /account/:accountId` - Get specific account
-- `POST /account/deposit` - Deposit funds
-- `POST /account/withdraw` - Withdraw funds
-- `GET /account/:accountId/statement` - Get account statement
-- `POST /account/close` - Close an account
+- `POST /v1/account/create` - Create a new account
+- `GET /v1/account` - Get all user accounts
+- `GET /v1/account/:accountId` - Get specific account
+- `POST /v1/account/deposit` - Deposit funds
+- `POST /v1/account/withdraw` - Withdraw funds
+- `GET /v1/account/:accountId/statement` - Get account statement
+- `POST /v1/account/close` - Close an account
 
 **🏦 Loans**
 
-- `POST /loan/apply` - Apply for a loan
-- `GET /loan` - Get all user loans
-- `POST /loan/:loanId/payment/:paymentId` - Make loan payment
+- `POST /v1/loan/apply` - Apply for a loan
+- `GET /v1/loan` - Get all user loans
+- `POST /v1/loan/:loanId/payment/:paymentId` - Make loan payment
 
 **⚙️ Admin/Operator** (requires API key)
 
-- `GET /admin/operator/balance` - Get bank balance
-- `GET /admin/operator/loan-funds` - Get available loan funds
-- `GET /admin/operator/can-approve-loan` - Check loan approval eligibility
+- `GET /v1/admin/operator/balance` - Get bank balance
+- `GET /v1/admin/operator/loan-funds` - Get available loan funds
+- `GET /v1/admin/operator/can-approve-loan` - Check loan approval eligibility
 
 ### 💡 Tips for Using Swagger
 
 - **Response Codes**: Each endpoint shows all possible HTTP status codes (200, 400, 401, 404, etc.)
 - **Schema Validation**: Click on schema examples to see all field types and validation rules
 - **Idempotency Keys**: Use unique keys for deposits, withdrawals, and loan applications to prevent duplicates
-- **Token Expiration**: If you get a 401 error, your token may have expired - use `/auth/refresh` to get a new one
+- **Token Expiration**: If you get a 401 error, your token may have expired - use `/v1/auth/refresh` to get a new one
 - **Try Different Scenarios**: Test error cases by providing invalid data or insufficient funds
 
 ## Postman Collection
@@ -1054,44 +1192,50 @@ The collection uses the following variables (auto-managed):
    - Or use the default: `user@example.com` / `password123`
 
 4. **Run the workflow**:
-   - **Step 1**: Run `POST /auth/register` or `POST /auth/login`
+   - **Step 1**: Run `POST /v1/auth/register` or `POST /v1/auth/login`
      - ✅ Automatically sets `accessToken`, `refreshToken`, and `userId`
-   - **Step 2**: Run `POST /account/create`
+   - **Step 2**: Run `POST /v1/account/create`
      - ✅ Automatically sets `accountId`
-   - **Step 3**: Run `POST /account/deposit`
+   - **Step 3**: Run `POST /v1/account/deposit`
      - Uses the auto-set `accountId`
-   - **Step 4**: Run `POST /loan/apply`
+   - **Step 4**: Run `POST /v1/loan/apply`
      - ✅ Automatically sets `loanId`
-   - **Step 5**: Run `POST /loan/:loanId/payment/:paymentId`
+   - **Step 5**: Run `POST /v1/loan/:loanId/payment/:paymentId`
      - Uses the auto-set `loanId` and `accountId`
 
 5. **Token expired?**
-   - Run `POST /auth/refresh` to get a new access token
-   - ✅ Automatically updates `accessToken` and `refreshToken`
+   - Run `POST /v1/auth/refresh` to get a new access token
+     - ✅ Automatically updates `accessToken` and `refreshToken`
 
 ### 📋 Available Endpoints in Collection
 
 **Authentication:**
 
-- `POST /auth/register` - Register new user
-- `POST /auth/login` - Login user
-- `POST /auth/refresh` - Refresh access token
+- `POST /v1/auth/register` - Register new user
+- `POST /v1/auth/login` - Login user
+- `POST /v1/auth/refresh` - Refresh access token
 
 **Account Management:**
 
-- `POST /account/create` - Create new account
-- `GET /account` - Get all accounts
-- `GET /account/:accountId` - Get specific account
-- `POST /account/deposit` - Deposit funds
-- `POST /account/withdraw` - Withdraw funds
-- `GET /account/:accountId/statement` - Get account statement
-- `POST /account/close` - Close account
+- `POST /v1/account/create` - Create new account
+- `GET /v1/account` - Get all accounts
+- `GET /v1/account/:accountId` - Get specific account
+- `POST /v1/account/deposit` - Deposit funds
+- `POST /v1/account/withdraw` - Withdraw funds
+- `GET /v1/account/:accountId/statement` - Get account statement
+- `POST /v1/account/close` - Close account
 
 **Loans:**
 
-- `POST /loan/apply` - Apply for a loan
-- `GET /loan` - Get all loans
-- `POST /loan/:loanId/payment/:paymentId` - Make loan payment
+- `POST /v1/loan/apply` - Apply for a loan
+- `GET /v1/loan` - Get all loans
+- `POST /v1/loan/:loanId/payment/:paymentId` - Make loan payment
+
+**Operator/Admin:** (requires ADMIN role)
+
+- `GET /v1/admin/operator/balance` - Get bank balance
+- `GET /v1/admin/operator/loan-funds` - Get loan funds breakdown
+- `GET /v1/admin/operator/can-approve-loan` - Check loan approval
 
 ### 💡 Tips
 

@@ -10,6 +10,10 @@ dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Set global API prefix
+  app.setGlobalPrefix('v1');
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true, // Strip properties that don't have any decorators

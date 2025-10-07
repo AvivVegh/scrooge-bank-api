@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "134c7c61-4b1b-470e-b01a-414442c89e0b",
     "name": "Scrooge Bank API Collection",
-    "description": "Scrooge Bank API Collection - Generic and Reusable\n\nThis collection uses variables to make it more flexible and reusable:\n\n**Collection Variables:**\n- `baseUrl`: API base URL (default: http://localhost:3001)\n- `accessToken`: JWT access token (auto-set from login/register response)\n- `refreshToken`: JWT refresh token (auto-set from login/register response)\n- `userId`: User ID (auto-extracted from JWT token)\n- `accountId`: Account ID (auto-set from create account response)\n- `loanId`: Loan ID (auto-set from loan apply response)\n- `email`: User email (default: user@example.com)\n- `password`: User password (default: password123)\n- `amount`: Transaction amount (default: 1000)\n- `loanAmount`: Loan amount (default: 100)\n\n**Usage:**\n1. Set your `baseUrl` variable to point to your API server\n2. Update `email` and `password` variables with your credentials\n3. Run the **login** or **register** request - this will automatically:\n   - Set `accessToken` for authenticated requests\n   - Set `refreshToken` for token rotation\n   - Extract and set `userId` from the JWT token\n4. Run **create account** to automatically set `accountId`\n5. Run **loan apply** to automatically set `loanId`\n6. All authenticated requests automatically use `{{accessToken}}`\n7. Use **refresh** request to rotate tokens when access token expires\n\n**Auto-Set Variables:**\nThe collection automatically captures and sets variables from API responses:\n- Login/Register → `accessToken`, `refreshToken`, `userId`\n- Create Account → `accountId`\n- Loan Apply → `loanId`\n- Refresh → new `accessToken` and `refreshToken`",
+    "description": "Scrooge Bank API Collection - Generic and Reusable\n\nThis collection uses variables to make it more flexible and reusable:\n\n**Collection Variables:**\n- `baseUrl`: API base URL (default: http://localhost:3001)\n- `accessToken`: JWT access token (auto-set from login/register response)\n- `refreshToken`: JWT refresh token (auto-set from login/register response)\n- `userId`: User ID (auto-extracted from JWT token)\n- `accountId`: Account ID (auto-set from create account response)\n- `loanId`: Loan ID (auto-set from loan apply response)\n- `email`: User email (default: user@example.com)\n- `password`: User password (default: password123)\n- `amount`: Transaction amount (default: 1000)\n- `loanAmount`: Loan amount (default: 100)\n\n**Usage:**\n1. Set your `baseUrl` variable to point to your API server\n2. Update `email` and `password` variables with your credentials\n3. Run the **login** or **register** request - this will automatically:\n   - Set `accessToken` for authenticated requests\n   - Set `refreshToken` for token rotation\n   - Extract and set `userId` from the JWT token\n4. Run **create account** to automatically set `accountId`\n5. Run **loan apply** to automatically set `loanId`\n6. All authenticated requests automatically use `{{accessToken}}`\n7. Use **refresh** request to rotate tokens when access token expires\n8. **Operator endpoints** require admin role - register with roles: [\"admin\"] to access\n\n**Auto-Set Variables:**\nThe collection automatically captures and sets variables from API responses:\n- Login/Register → `accessToken`, `refreshToken`, `userId`\n- Create Account → `accountId`\n- Loan Apply → `loanId`\n- Refresh → new `accessToken` and `refreshToken`",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "14788046"
   },
@@ -121,10 +121,10 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/account",
+              "raw": "{{baseUrl}}/v1/account",
               "protocol": "http",
               "host": ["{{baseUrl}}"],
-              "path": ["account"]
+              "path": ["v1", "account"]
             }
           },
           "response": []
@@ -157,10 +157,10 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/account/{{accountId}}/statement?fromDate={{fromDate}}&toDate={{toDate}}",
+              "raw": "{{baseUrl}}/v1/account/{{accountId}}/statement?fromDate={{fromDate}}&toDate={{toDate}}",
               "protocol": "http",
               "host": ["{{baseUrl}}"],
-              "path": ["account", "{{accountId}}", "statement"],
+              "path": ["v1", "account", "{{accountId}}", "statement"],
               "query": [
                 {
                   "key": "fromDate",
@@ -202,10 +202,10 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/account",
+              "raw": "{{baseUrl}}/v1/account",
               "protocol": "http",
               "host": ["{{baseUrl}}"],
-              "path": ["account"]
+              "path": ["v1", "account"]
             }
           },
           "response": []
@@ -262,10 +262,10 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/account/create",
+              "raw": "{{baseUrl}}/v1/account/create",
               "protocol": "http",
               "host": ["{{baseUrl}}"],
-              "path": ["account", "create"]
+              "path": ["v1", "account", "create"]
             }
           },
           "response": []
@@ -304,10 +304,10 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/account/deposit",
+              "raw": "{{baseUrl}}/v1/account/deposit",
               "protocol": "http",
               "host": ["{{baseUrl}}"],
-              "path": ["account", "deposit"]
+              "path": ["v1", "account", "deposit"]
             }
           },
           "response": []
@@ -346,10 +346,10 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/account/withdraw",
+              "raw": "{{baseUrl}}/v1/account/withdraw",
               "protocol": "http",
               "host": ["{{baseUrl}}"],
-              "path": ["account", "withdraw"]
+              "path": ["v1", "account", "withdraw"]
             }
           },
           "response": []
@@ -388,10 +388,10 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/account/close",
+              "raw": "{{baseUrl}}/v1/account/close",
               "protocol": "http",
               "host": ["{{baseUrl}}"],
-              "path": ["account", "close"]
+              "path": ["v1", "account", "close"]
             }
           },
           "response": []
@@ -476,10 +476,10 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/auth/register",
+              "raw": "{{baseUrl}}/v1/auth/register",
               "protocol": "http",
               "host": ["{{baseUrl}}"],
-              "path": ["auth", "register"]
+              "path": ["v1", "auth", "register"]
             }
           },
           "response": []
@@ -559,10 +559,10 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/auth/login",
+              "raw": "{{baseUrl}}/v1/auth/login",
               "protocol": "http",
               "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "path": ["v1", "auth", "login"]
             }
           },
           "response": []
@@ -618,10 +618,10 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/auth/refresh",
+              "raw": "{{baseUrl}}/v1/auth/refresh",
               "protocol": "http",
               "host": ["{{baseUrl}}"],
-              "path": ["auth", "refresh"]
+              "path": ["v1", "auth", "refresh"]
             }
           },
           "response": []
@@ -683,10 +683,10 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/loan/apply",
+              "raw": "{{baseUrl}}/v1/loan/apply",
               "protocol": "http",
               "host": ["{{baseUrl}}"],
-              "path": ["loan", "apply"]
+              "path": ["v1", "loan", "apply"]
             }
           },
           "response": []
@@ -716,10 +716,10 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/loan",
+              "raw": "{{baseUrl}}/v1/loan",
               "protocol": "http",
               "host": ["{{baseUrl}}"],
-              "path": ["loan"]
+              "path": ["v1", "loan"]
             }
           },
           "response": []
@@ -758,10 +758,109 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/loan/{{loanId}}/payment",
+              "raw": "{{baseUrl}}/v1/loan/{{loanId}}/payment",
               "protocol": "http",
               "host": ["{{baseUrl}}"],
-              "path": ["loan", "{{loanId}}", "payment"]
+              "path": ["v1", "loan", "{{loanId}}", "payment"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "operator",
+      "item": [
+        {
+          "name": "get bank balance",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/operator/balance",
+              "protocol": "http",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "admin", "operator", "balance"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get loan funds breakdown",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/operator/loan-funds",
+              "protocol": "http",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "admin", "operator", "loan-funds"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "check loan approval",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/operator/can-approve-loan?amountCents=50000",
+              "protocol": "http",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "admin", "operator", "can-approve-loan"],
+              "query": [
+                {
+                  "key": "amountCents",
+                  "value": "50000",
+                  "description": "Loan amount in cents"
+                }
+              ]
             }
           },
           "response": []
