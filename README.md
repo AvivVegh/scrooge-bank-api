@@ -16,6 +16,7 @@ A comprehensive banking API built with NestJS and TypeScript that provides user 
   - [Authentication](#authentication)
   - [Account Management](#account-management)
   - [Loans](#loans)
+  - [Operator](#operator)
 - [API Flow Guide](#api-flow-guide)
 - [Swagger Documentation](#swagger-documentation)
 - [Postman Collection](#postman-collection)
@@ -91,6 +92,7 @@ As an authenticated user, I need to:
 - 📊 **Account Statements** with date range filtering
 - 🔒 **Secure** with password hashing and HTTP-only cookies
 - ♻️ **Idempotency** support to prevent duplicate transactions
+- ⚙️ **Operator/Admin** endpoints for bank balance and loan fund management
 - 📝 **API Documentation** with Swagger/OpenAPI
 
 ## Getting Started
@@ -263,6 +265,41 @@ All authentication endpoints are prefixed with `/v1/auth`.
 **Description:** Create a new user account and receive an access token.
 
 **Request Body:**
+
+```json
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "roles": ["user"]
+}
+```
+
+**Roles Parameter:**
+
+The `roles` field is optional and accepts an array of role strings:
+
+- **`["user"]`** (default) - Standard user with access to:
+  - Account management (create, view, close accounts)
+  - Transactions (deposits, withdrawals)
+  - Loan services (apply, make payments)
+  - Account statements
+
+- **`["admin"]`** - Administrator with all user permissions plus:
+  - Bank balance monitoring (`GET /v1/admin/operator/balance`)
+  - Loan funds breakdown (`GET /v1/admin/operator/loan-funds`)
+  - Loan approval checks (`GET /v1/admin/operator/can-approve-loan`)
+
+**Example - Register as Admin:**
+
+```json
+{
+  "email": "admin@example.com",
+  "password": "admin123",
+  "roles": ["admin"]
+}
+```
+
+**Example - Register as User (default):**
 
 ```json
 {
@@ -764,7 +801,7 @@ Authorization: Bearer <your_access_token>
 
 ---
 
-### Operator/Admin
+### Operator
 
 All operator endpoints are prefixed with `/v1/admin/operator` and require JWT authentication with ADMIN role.
 
@@ -866,6 +903,256 @@ Authorization: Bearer <your_access_token>
 - `200 OK` - Loan approval check completed
 - `401 Unauthorized` - Missing or invalid token
 - `403 Forbidden` - Admin role required
+
+---
+
+## How It Works
+
+This section provides a complete walkthrough of the Scrooge Bank API, demonstrating all major features with both admin and user accounts.
+
+### Recommended Setup: Two Users
+
+For the best experience and to explore all features, we recommend creating two accounts:
+
+1. **Admin User** - Access operator endpoints to monitor bank health
+2. **Regular User** - Perform typical banking operations
+
+---
+
+### Complete Workflow
+
+#### Step 1: Register Admin User
+
+First, create an admin account to access operator endpoints:
+
+```bash
+curl -X POST http://localhost:3001/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@scroogebank.com",
+    "password": "admin123",
+    "roles": ["admin"]
+  }'
+```
+
+**Save the admin `accessToken` from the response.**
+
+---
+
+#### Step 2: Register Regular User
+
+Create a regular user account for banking operations:
+
+```bash
+curl -X POST http://localhost:3001/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com",
+    "password": "password123"
+  }'
+```
+
+**Save the user `accessToken` from the response.**
+
+---
+
+#### Step 3: Create Account (User)
+
+Using the **user token**, create a bank account:
+
+```bash
+curl -X POST http://localhost:3001/v1/account/create \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer USER_ACCESS_TOKEN"
+```
+
+**Save the account `id` from the response.**
+
+---
+
+#### Step 4: Deposit Funds (User)
+
+Deposit money into the account:
+
+```bash
+curl -X POST http://localhost:3001/v1/account/deposit \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer USER_ACCESS_TOKEN" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_ID",
+    "amount": 10000,
+    "idempotencyKey": "deposit-001"
+  }'
+```
+
+**Result:** Account balance is now $10,000
+
+---
+
+#### Step 5: Apply for a Loan (User)
+
+Apply for a loan:
+
+```bash
+curl -X POST http://localhost:3001/v1/loan/apply \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer USER_ACCESS_TOKEN" \
+  -d '{
+    "amount": 5000,
+    "idempotencyKey": "loan-app-001"
+  }'
+```
+
+**Save the loan `id` from the response.**
+
+**Note:** The loan will be approved if the bank has sufficient funds (base cash + 25% of customer deposits).
+
+---
+
+#### Step 6: Make Loan Payment (User)
+
+Pay back part of the loan:
+
+```bash
+curl -X POST http://localhost:3001/v1/loan/YOUR_LOAN_ID/payment/<uuid> \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer USER_ACCESS_TOKEN" \
+  -d '{
+    "amount": 2000,
+    "fromAccountId": "YOUR_ACCOUNT_ID"
+  }'
+```
+
+**Result:**
+
+- Loan balance reduced by $2,000
+- Account balance reduced by $2,000
+
+---
+
+#### Step 7: Withdraw Funds (User)
+
+Withdraw money from the account:
+
+```bash
+curl -X POST http://localhost:3001/v1/account/withdraw \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer USER_ACCESS_TOKEN" \
+  -d '{
+    "accountId": "YOUR_ACCOUNT_ID",
+    "amount": 3000,
+    "idempotencyKey": "withdraw-001"
+  }'
+```
+
+**Result:** Account balance reduced by $3,000
+
+---
+
+#### Step 8: Check Bank Balance (Admin)
+
+Using the **admin token**, check the total bank balance:
+
+```bash
+curl -X GET http://localhost:3001/v1/admin/operator/balance \
+  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
+```
+
+**Response:**
+
+```json
+{
+  "balanceCents": 248000,
+  "balance": 2480.0
+}
+```
+
+This shows how much cash the bank has on hand (can be negative if withdrawals exceed deposits).
+
+---
+
+#### Step 9: Check Loan Funds Breakdown (Admin)
+
+Get detailed breakdown of available loan funds:
+
+```bash
+curl -X GET http://localhost:3001/v1/admin/operator/loan-funds \
+  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
+```
+
+**Response:**
+
+```json
+{
+  "balanceCents": 253000,
+  "balance": 2530.0,
+  "baseCashCents": 250000,
+  "depositsOnHandCents": 500000,
+  "loanableFromDepositsCents": 125000,
+  "outstandingLoansCents": 300000,
+  "availableForLoansCents": 253000,
+  "availableForLoans": 2530.0
+}
+```
+
+This shows:
+
+- Base bank cash: $2,500 (starting amount)
+- Customer deposits on hand: $5,000
+- 25% of deposits available for loans: $1,250
+- Outstanding loans: $3,000
+- Total available for new loans: $2,530
+
+---
+
+#### Step 10: Check Loan Approval (Admin)
+
+Check if a specific loan amount can be approved:
+
+```bash
+curl -X GET "http://localhost:3001/v1/admin/operator/can-approve-loan?amountCents=100000" \
+  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
+```
+
+**Response:**
+
+```json
+{
+  "canApprove": true,
+  "availableForLoansCents": 253000,
+  "requestedCents": 100000,
+  "shortfallCents": 0
+}
+```
+
+This tells you:
+
+- Whether the loan can be approved
+- How much is available for loans
+- If there's a shortfall (when `canApprove` is false)
+
+---
+
+### Key Points
+
+✅ **User Operations:**
+
+- Create account → Deposit → Apply for loan → Pay loan → Withdraw
+- All operations require user authentication
+- Idempotency keys prevent duplicate transactions
+
+✅ **Admin Operations:**
+
+- Monitor bank balance (can go negative from withdrawals)
+- Track loan funds breakdown
+- Check loan approval eligibility
+
+✅ **Bank Rules:**
+
+- Starting capital: $250,000
+- Can use 25% of customer deposits for loans
+- Withdrawals can put bank into debt
+- Loans cannot be approved if insufficient funds
 
 ---
 
